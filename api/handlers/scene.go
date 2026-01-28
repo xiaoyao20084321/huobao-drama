@@ -39,13 +39,13 @@ func (h *SceneHandler) GetStoryboardsForEpisode(c *gin.Context) {
 func (h *SceneHandler) UpdateScene(c *gin.Context) {
 	sceneID := c.Param("scene_id")
 
-	var req services2.UpdateSceneRequest
+	var req services2.UpdateSceneInfoRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "Invalid request")
 		return
 	}
 
-	if err := h.sceneService.UpdateScene(sceneID, &req); err != nil {
+	if err := h.sceneService.UpdateSceneInfo(sceneID, &req); err != nil {
 		h.log.Errorw("Failed to update scene", "error", err, "scene_id", sceneID)
 		response.InternalError(c, err.Error())
 		return
@@ -110,4 +110,26 @@ func (h *SceneHandler) DeleteScene(c *gin.Context) {
 	}
 
 	response.Success(c, gin.H{"message": "场景已删除"})
+}
+
+func (h *SceneHandler) CreateScene(c *gin.Context) {
+	var req services2.CreateSceneRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request")
+		return
+	}
+
+	if req.DramaID == 0 {
+		response.BadRequest(c, "drama_id is required")
+		return
+	}
+
+	scene, err := h.sceneService.CreateScene(&req)
+	if err != nil {
+		h.log.Errorw("Failed to create scene", "error", err)
+		response.InternalError(c, err.Error())
+		return
+	}
+
+	response.Success(c, scene)
 }

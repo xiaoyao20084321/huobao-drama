@@ -98,6 +98,8 @@ export const characterLibraryAPI = {
     appearance?: string
     personality?: string
     description?: string
+    image_url?: string
+    local_path?: string
   }) {
     return request.put(`/characters/${characterId}`, data)
   },
@@ -105,5 +107,10 @@ export const characterLibraryAPI = {
   // 删除角色
   deleteCharacter(characterId: number) {
     return request.delete(`/characters/${characterId}`)
+  },
+
+  // 从剧本提取角色
+  extractFromEpisode(episodeId: number) {
+    return request.post<{ task_id: string; message: string }>(`/episodes/${episodeId}/characters/extract`)
   }
 }

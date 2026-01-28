@@ -1,8 +1,11 @@
 package services
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -25,6 +28,7 @@ type ImageGenerationService struct {
 	log             *logger.Logger
 	config          *config.Config
 	promptI18n      *PromptI18n
+	taskService     *TaskService
 }
 
 // truncateImageURL 截断图片 URL，避免 base64 格式的 URL 占满日志
@@ -54,6 +58,7 @@ func NewImageGenerationService(db *gorm.DB, cfg *config.Config, transferService 
 		config:          cfg,
 		promptI18n:      NewPromptI18n(cfg),
 		log:             log,
+		taskService:     NewTaskService(db, log),
 	}
 }
 
@@ -67,6 +72,7 @@ type GenerateImageRequest struct {
 	DramaID         string   `json:"drama_id" binding:"required"`
 	SceneID         *uint    `json:"scene_id"`
 	CharacterID     *uint    `json:"character_id"`
+	PropID          *uint    `json:"prop_id"`
 	ImageType       string   `json:"image_type"` // character, scene, storyboard
 	FrameType       *string  `json:"frame_type"` // first, key, last, panel, action
 	Prompt          string   `json:"prompt" binding:"required,min=5,max=2000"`
@@ -81,6 +87,7 @@ type GenerateImageRequest struct {
 	Seed            *int64   `json:"seed"`
 	Width           *int     `json:"width"`
 	Height          *int     `json:"height"`
+	ImageLocalPath  *string  `json:"image_local_path"` // 本地图片路径，用于图生图
 	ReferenceImages []string `json:"reference_images"` // 参考图片URL列表
 }
 
@@ -89,7 +96,6 @@ func (s *ImageGenerationService) GenerateImage(request *GenerateImageRequest) (*
 	if err := s.db.Where("id = ? ", request.DramaID).First(&drama).Error; err != nil {
 		return nil, fmt.Errorf("drama not found")
 	}
-
 	// 注意：SceneID可能指向Scene或Storyboard表，调用方已经做过权限验证，这里不再重复验证
 
 	provider := request.Provider
@@ -120,6 +126,7 @@ func (s *ImageGenerationService) GenerateImage(request *GenerateImageRequest) (*
 		DramaID:         uint(dramaIDParsed),
 		SceneID:         request.SceneID,
 		CharacterID:     request.CharacterID,
+		PropID:          request.PropID,
 		ImageType:       imageType,
 		FrameType:       request.FrameType,
 		Provider:        provider,
@@ -135,6 +142,7 @@ func (s *ImageGenerationService) GenerateImage(request *GenerateImageRequest) (*
 		Seed:            request.Seed,
 		Width:           request.Width,
 		Height:          request.Height,
+		LocalPath:       request.ImageLocalPath,
 		Status:          models.ImageStatusPending,
 	}
 
@@ -149,6 +157,7 @@ func (s *ImageGenerationService) GenerateImage(request *GenerateImageRequest) (*
 
 func (s *ImageGenerationService) ProcessImageGeneration(imageGenID uint) {
 	var imageGen models.ImageGeneration
+	imageRatio := s.config.Style.DefaultImageRatio
 	if err := s.db.First(&imageGen, imageGenID).Error; err != nil {
 		s.log.Errorw("Failed to load image generation", "error", err, "id", imageGenID)
 		return
@@ -173,13 +182,42 @@ func (s *ImageGenerationService) ProcessImageGeneration(imageGenID uint) {
 	}
 
 	// 解析参考图片
-	var referenceImages []string
+	var referenceImagePaths []string
 	if len(imageGen.ReferenceImages) > 0 {
-		if err := json.Unmarshal(imageGen.ReferenceImages, &referenceImages); err == nil {
+		if err := json.Unmarshal(imageGen.ReferenceImages, &referenceImagePaths); err == nil {
 			s.log.Infow("Using reference images for generation",
 				"id", imageGenID,
-				"reference_count", len(referenceImages),
-				"references", referenceImages)
+				"reference_count", len(referenceImagePaths),
+				"references", referenceImagePaths)
+		}
+	}
+
+	// 如果有 local_path，添加到参考图片列表的开头
+	if imageGen.LocalPath != nil && *imageGen.LocalPath != "" {
+		referenceImagePaths = append([]string{*imageGen.LocalPath}, referenceImagePaths...)
+	}
+
+	// 将所有参考图片路径转换为 base64（如果是本地路径）或保持原样（如果是 URL）
+	var referenceImages []string
+	for _, imgPath := range referenceImagePaths {
+		// 判断是否为 HTTP/HTTPS URL
+		if strings.HasPrefix(imgPath, "http://") || strings.HasPrefix(imgPath, "https://") {
+			// 保持 URL 原样
+			referenceImages = append(referenceImages, imgPath)
+		} else {
+			// 视为本地路径，转换为 base64
+			base64Image, err := s.loadImageAsBase64(imgPath)
+			if err != nil {
+				s.log.Warnw("Failed to load local image as base64",
+					"error", err,
+					"id", imageGenID,
+					"local_path", imgPath)
+			} else {
+				referenceImages = append(referenceImages, base64Image)
+				s.log.Infow("Loaded local image as base64 for generation",
+					"id", imageGenID,
+					"local_path", imgPath)
+			}
 		}
 	}
 
@@ -218,7 +256,9 @@ func (s *ImageGenerationService) ProcessImageGeneration(imageGenID uint) {
 		opts = append(opts, image.WithReferenceImages(referenceImages))
 	}
 
-	result, err := client.GenerateImage(imageGen.Prompt, opts...)
+	prompt := imageGen.Prompt
+	prompt += ", imageRatio:" + imageRatio
+	result, err := client.GenerateImage(prompt, opts...)
 	if err != nil {
 		s.log.Errorw("Image generation API call failed", "error", err, "id", imageGenID, "prompt", imageGen.Prompt)
 		s.updateImageGenError(imageGenID, err.Error())
@@ -269,11 +309,11 @@ func (s *ImageGenerationService) pollTaskStatus(imageGenID uint, client image.Im
 func (s *ImageGenerationService) completeImageGeneration(imageGenID uint, result *image.ImageResult) {
 	now := time.Now()
 
-	// 下载图片到本地存储（仅用于缓存，不更新数据库）
-	// 仅下载 HTTP/HTTPS URL，跳过 data URI
+	// 下载图片到本地存储并保存相对路径到数据库
+	var localPath *string
 	if s.localStorage != nil && result.ImageURL != "" &&
 		(strings.HasPrefix(result.ImageURL, "http://") || strings.HasPrefix(result.ImageURL, "https://")) {
-		_, err := s.localStorage.DownloadFromURL(result.ImageURL, "images")
+		downloadResult, err := s.localStorage.DownloadFromURLWithPath(result.ImageURL, "images")
 		if err != nil {
 			errStr := err.Error()
 			if len(errStr) > 200 {
@@ -284,16 +324,19 @@ func (s *ImageGenerationService) completeImageGeneration(imageGenID uint, result
 				"id", imageGenID,
 				"original_url", truncateImageURL(result.ImageURL))
 		} else {
-			s.log.Infow("Image downloaded to local storage for caching",
+			localPath = &downloadResult.RelativePath
+			s.log.Infow("Image downloaded to local storage",
 				"id", imageGenID,
-				"original_url", truncateImageURL(result.ImageURL))
+				"original_url", truncateImageURL(result.ImageURL),
+				"local_path", downloadResult.RelativePath)
 		}
 	}
 
-	// 数据库中保持使用原始URL
+	// 数据库中保存原始URL和本地路径
 	updates := map[string]interface{}{
 		"status":       models.ImageStatusCompleted,
 		"image_url":    result.ImageURL,
+		"local_path":   localPath,
 		"completed_at": now,
 	}
 
@@ -311,7 +354,17 @@ func (s *ImageGenerationService) completeImageGeneration(imageGenID uint, result
 		return
 	}
 
-	s.db.Model(&models.ImageGeneration{}).Where("id = ?", imageGenID).Updates(updates)
+	// 使用 Updates 更新基本字段
+	if err := s.db.Model(&models.ImageGeneration{}).Where("id = ?", imageGenID).Updates(updates).Error; err != nil {
+		s.log.Errorw("Failed to update image generation", "error", err, "id", imageGenID)
+		return
+	}
+
+	// 单独更新 local_path 字段（即使为 nil 也要更新）
+	if err := s.db.Model(&models.ImageGeneration{}).Where("id = ?", imageGenID).Update("local_path", localPath).Error; err != nil {
+		s.log.Errorw("Failed to update local_path", "error", err, "id", imageGenID)
+	}
+
 	s.log.Infow("Image generation completed", "id", imageGenID)
 
 	// 如果关联了storyboard，同步更新storyboard的composed_image
@@ -325,29 +378,58 @@ func (s *ImageGenerationService) completeImageGeneration(imageGenID uint, result
 		}
 	}
 
-	// 如果关联了scene，同步更新scene的image_url和status（仅当ImageType是scene时）
+	// 如果关联了scene，同步更新scene的image_url、local_path和status（仅当ImageType是scene时）
 	if imageGen.SceneID != nil && imageGen.ImageType == string(models.ImageTypeScene) {
 		sceneUpdates := map[string]interface{}{
 			"status":    "generated",
 			"image_url": result.ImageURL,
+		}
+		if localPath != nil {
+			sceneUpdates["local_path"] = localPath
 		}
 		if err := s.db.Model(&models.Scene{}).Where("id = ?", *imageGen.SceneID).Updates(sceneUpdates).Error; err != nil {
 			s.log.Errorw("Failed to update scene", "error", err, "scene_id", *imageGen.SceneID)
 		} else {
 			s.log.Infow("Scene updated with generated image",
 				"scene_id", *imageGen.SceneID,
-				"image_url", truncateImageURL(result.ImageURL))
+				"image_url", truncateImageURL(result.ImageURL),
+				"local_path", localPath)
 		}
 	}
 
-	// 如果关联了角色，同步更新角色的image_url
+	// 如果关联了角色，同步更新角色的image_url和local_path
 	if imageGen.CharacterID != nil {
-		if err := s.db.Model(&models.Character{}).Where("id = ?", *imageGen.CharacterID).Update("image_url", result.ImageURL).Error; err != nil {
-			s.log.Errorw("Failed to update character image_url", "error", err, "character_id", *imageGen.CharacterID)
+		characterUpdates := map[string]interface{}{
+			"image_url": result.ImageURL,
+		}
+		if localPath != nil {
+			characterUpdates["local_path"] = localPath
+		}
+		if err := s.db.Model(&models.Character{}).Where("id = ?", *imageGen.CharacterID).Updates(characterUpdates).Error; err != nil {
+			s.log.Errorw("Failed to update character", "error", err, "character_id", *imageGen.CharacterID)
 		} else {
 			s.log.Infow("Character updated with generated image",
 				"character_id", *imageGen.CharacterID,
-				"image_url", truncateImageURL(result.ImageURL))
+				"image_url", truncateImageURL(result.ImageURL),
+				"local_path", localPath)
+		}
+	}
+
+	// 如果关联了道具，同步更新道具的image_url和local_path
+	if imageGen.PropID != nil {
+		propUpdates := map[string]interface{}{
+			"image_url": result.ImageURL,
+		}
+		if localPath != nil {
+			propUpdates["local_path"] = localPath
+		}
+		if err := s.db.Model(&models.Prop{}).Where("id = ?", *imageGen.PropID).Updates(propUpdates).Error; err != nil {
+			s.log.Errorw("Failed to update prop", "error", err, "prop_id", *imageGen.PropID)
+		} else {
+			s.log.Infow("Prop updated with generated image",
+				"prop_id", *imageGen.PropID,
+				"image_url", truncateImageURL(result.ImageURL),
+				"local_path", localPath)
 		}
 	}
 }
@@ -530,6 +612,60 @@ func (s *ImageGenerationService) DeleteImageGeneration(imageGenID uint) error {
 	return nil
 }
 
+// UploadImageRequest 上传图片请求
+type UploadImageRequest struct {
+	StoryboardID uint   `json:"storyboard_id"`
+	DramaID      uint   `json:"drama_id"`
+	FrameType    string `json:"frame_type"`
+	ImageURL     string `json:"image_url"`
+	Prompt       string `json:"prompt"`
+}
+
+// CreateImageFromUpload 从上传的图片URL创建图片生成记录
+func (s *ImageGenerationService) CreateImageFromUpload(req *UploadImageRequest) (*models.ImageGeneration, error) {
+	// 验证storyboard存在
+	var storyboard models.Storyboard
+	if err := s.db.First(&storyboard, req.StoryboardID).Error; err != nil {
+		return nil, fmt.Errorf("storyboard not found")
+	}
+
+	// 验证drama存在
+	var drama models.Drama
+	if err := s.db.First(&drama, req.DramaID).Error; err != nil {
+		return nil, fmt.Errorf("drama not found")
+	}
+
+	prompt := req.Prompt
+	if prompt == "" {
+		prompt = "用户上传图片"
+	}
+
+	now := time.Now()
+	imageGen := &models.ImageGeneration{
+		StoryboardID: &req.StoryboardID,
+		DramaID:      req.DramaID,
+		ImageType:    string(models.ImageTypeStoryboard),
+		FrameType:    &req.FrameType,
+		Provider:     "upload",
+		Prompt:       prompt,
+		Model:        "upload",
+		ImageURL:     &req.ImageURL,
+		Status:       models.ImageStatusCompleted,
+		CompletedAt:  &now,
+	}
+
+	if err := s.db.Create(imageGen).Error; err != nil {
+		return nil, fmt.Errorf("failed to create image record: %w", err)
+	}
+
+	s.log.Infow("Image created from upload",
+		"id", imageGen.ID,
+		"storyboard_id", req.StoryboardID,
+		"frame_type", req.FrameType)
+
+	return imageGen, nil
+}
+
 func (s *ImageGenerationService) GenerateImagesForScene(sceneID string) ([]*models.ImageGeneration, error) {
 	// 转换sceneID
 	sid, err := strconv.ParseUint(sceneID, 10, 32)
@@ -648,25 +784,58 @@ func (s *ImageGenerationService) GetScencesForEpisode(episodeID string) ([]*mode
 }
 
 // ExtractBackgroundsForEpisode 从剧本内容中提取场景并保存到项目级别数据库
-func (s *ImageGenerationService) ExtractBackgroundsForEpisode(episodeID string, model string) ([]*models.Scene, error) {
+func (s *ImageGenerationService) ExtractBackgroundsForEpisode(episodeID string, model string, style string) (string, error) {
 	var episode models.Episode
 	if err := s.db.Preload("Storyboards").First(&episode, episodeID).Error; err != nil {
-		return nil, fmt.Errorf("episode not found")
+		return "", fmt.Errorf("episode not found")
 	}
 
 	// 如果没有剧本内容，无法提取场景
 	if episode.ScriptContent == nil || *episode.ScriptContent == "" {
-		return nil, fmt.Errorf("episode has no script content")
+		return "", fmt.Errorf("episode has no script content")
 	}
 
-	s.log.Infow("Extracting backgrounds from script", "episode_id", episodeID, "model", model)
+	// 创建任务
+	task, err := s.taskService.CreateTask("background_extraction", episodeID)
+	if err != nil {
+		s.log.Errorw("Failed to create background extraction task", "error", err, "episode_id", episodeID)
+		return "", fmt.Errorf("创建任务失败: %w", err)
+	}
+
+	// 异步处理场景提取
+	go s.processBackgroundExtraction(task.ID, episodeID, model, style)
+
+	s.log.Infow("Background extraction task created", "task_id", task.ID, "episode_id", episodeID)
+	return task.ID, nil
+}
+
+// processBackgroundExtraction 异步处理场景提取
+func (s *ImageGenerationService) processBackgroundExtraction(taskID string, episodeID string, model string, style string) {
+	// 更新任务状态为处理中
+	s.taskService.UpdateTaskStatus(taskID, "processing", 0, "正在提取场景信息...")
+
+	var episode models.Episode
+	if err := s.db.Preload("Storyboards").First(&episode, episodeID).Error; err != nil {
+		s.log.Errorw("Episode not found during background extraction", "error", err, "episode_id", episodeID)
+		s.taskService.UpdateTaskStatus(taskID, "failed", 0, "剧集信息不存在")
+		return
+	}
+
+	if episode.ScriptContent == nil || *episode.ScriptContent == "" {
+		s.log.Errorw("Episode has no script content during background extraction", "episode_id", episodeID)
+		s.taskService.UpdateTaskStatus(taskID, "failed", 0, "剧本内容为空")
+		return
+	}
+
+	s.log.Infow("Extracting backgrounds from script", "episode_id", episodeID, "model", model, "task_id", taskID)
 	dramaID := episode.DramaID
 
 	// 使用AI从剧本内容中提取场景
-	backgroundsInfo, err := s.extractBackgroundsFromScript(*episode.ScriptContent, dramaID, model)
+	backgroundsInfo, err := s.extractBackgroundsFromScript(*episode.ScriptContent, dramaID, model, style)
 	if err != nil {
-		s.log.Errorw("Failed to extract backgrounds from script", "error", err)
-		return nil, err
+		s.log.Errorw("Failed to extract backgrounds from script", "error", err, "task_id", taskID)
+		s.taskService.UpdateTaskStatus(taskID, "failed", 0, "AI提取场景失败: "+err.Error())
+		return
 	}
 
 	// 保存到数据库（不涉及Storyboard关联，因为此时还没有生成分镜）
@@ -674,10 +843,10 @@ func (s *ImageGenerationService) ExtractBackgroundsForEpisode(episodeID string, 
 	err = s.db.Transaction(func(tx *gorm.DB) error {
 		// 先删除该章节的所有场景（实现重新提取覆盖功能）
 		if err := tx.Where("episode_id = ?", episode.ID).Delete(&models.Scene{}).Error; err != nil {
-			s.log.Errorw("Failed to delete old scenes", "error", err)
+			s.log.Errorw("Failed to delete old scenes", "error", err, "task_id", taskID)
 			return err
 		}
-		s.log.Infow("Deleted old scenes for re-extraction", "episode_id", episode.ID)
+		s.log.Infow("Deleted old scenes for re-extraction", "episode_id", episode.ID, "task_id", taskID)
 
 		// 创建新提取的场景
 		for _, bgInfo := range backgroundsInfo {
@@ -700,26 +869,37 @@ func (s *ImageGenerationService) ExtractBackgroundsForEpisode(episodeID string, 
 			s.log.Infow("Created new scene from script",
 				"scene_id", scene.ID,
 				"location", scene.Location,
-				"time", scene.Time)
+				"time", scene.Time,
+				"task_id", taskID)
 		}
 
 		return nil
 	})
 
 	if err != nil {
-		return nil, err
+		s.log.Errorw("Failed to save scenes to database", "error", err, "task_id", taskID)
+		s.taskService.UpdateTaskStatus(taskID, "failed", 0, "保存场景信息失败: "+err.Error())
+		return
 	}
 
-	s.log.Infow("Saved scenes to database",
+	// 更新任务状态为完成
+	resultData := map[string]interface{}{
+		"scenes":     scenes,
+		"count":      len(scenes),
+		"episode_id": episodeID,
+		"drama_id":   dramaID,
+	}
+	s.taskService.UpdateTaskResult(taskID, resultData)
+
+	s.log.Infow("Background extraction completed",
+		"task_id", taskID,
 		"episode_id", episodeID,
 		"total_storyboards", len(episode.Storyboards),
 		"unique_scenes", len(scenes))
-
-	return scenes, nil
 }
 
 // extractBackgroundsFromScript 从剧本内容中使用AI提取场景信息
-func (s *ImageGenerationService) extractBackgroundsFromScript(scriptContent string, dramaID uint, model string) ([]BackgroundInfo, error) {
+func (s *ImageGenerationService) extractBackgroundsFromScript(scriptContent string, dramaID uint, model string, style string) ([]BackgroundInfo, error) {
 	if scriptContent == "" {
 		return []BackgroundInfo{}, nil
 	}
@@ -742,7 +922,7 @@ func (s *ImageGenerationService) extractBackgroundsFromScript(scriptContent stri
 	}
 
 	// 使用国际化提示词
-	systemPrompt := s.promptI18n.GetSceneExtractionPrompt()
+	systemPrompt := s.promptI18n.GetSceneExtractionPrompt(style)
 	contentLabel := s.promptI18n.FormatUserPrompt("script_content_label")
 
 	// 根据语言构建不同的格式说明
@@ -876,7 +1056,7 @@ Please strictly follow the JSON format and ensure all fields use English.`
 }
 
 // extractBackgroundsWithAI 使用AI智能分析场景并提取唯一背景
-func (s *ImageGenerationService) extractBackgroundsWithAI(storyboards []models.Storyboard) ([]BackgroundInfo, error) {
+func (s *ImageGenerationService) extractBackgroundsWithAI(storyboards []models.Storyboard, style string) ([]BackgroundInfo, error) {
 	if len(storyboards) == 0 {
 		return []BackgroundInfo{}, nil
 	}
@@ -906,7 +1086,7 @@ func (s *ImageGenerationService) extractBackgroundsWithAI(storyboards []models.S
 	}
 
 	// 使用国际化提示词
-	systemPrompt := s.promptI18n.GetSceneExtractionPrompt()
+	systemPrompt := s.promptI18n.GetSceneExtractionPrompt(style)
 	storyboardLabel := s.promptI18n.FormatUserPrompt("storyboard_list_label")
 
 	// 根据语言构建不同的提示词
@@ -1096,4 +1276,55 @@ func (s *ImageGenerationService) extractUniqueBackgrounds(scenes []models.Storyb
 	}
 
 	return backgrounds
+}
+
+// loadImageAsBase64 读取本地图片文件并转换为 base64 格式的 data URI
+func (s *ImageGenerationService) loadImageAsBase64(localPath string) (string, error) {
+	// 构建完整的文件路径
+	var fullPath string
+	if filepath.IsAbs(localPath) {
+		fullPath = localPath
+	} else {
+		// 如果是相对路径，拼接存储根目录
+		if s.localStorage != nil {
+			fullPath = s.localStorage.GetAbsolutePath(localPath)
+		} else {
+			fullPath = filepath.Join(s.config.Storage.LocalPath, localPath)
+		}
+	}
+
+	// 读取文件
+	fileData, err := os.ReadFile(fullPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read image file: %w", err)
+	}
+
+	// 根据文件扩展名确定 MIME 类型
+	ext := strings.ToLower(filepath.Ext(fullPath))
+	mimeType := "image/jpeg" // 默认
+	switch ext {
+	case ".png":
+		mimeType = "image/png"
+	case ".jpg", ".jpeg":
+		mimeType = "image/jpeg"
+	case ".gif":
+		mimeType = "image/gif"
+	case ".webp":
+		mimeType = "image/webp"
+	}
+
+	// 转换为 base64
+	base64Data := base64.StdEncoding.EncodeToString(fileData)
+
+	// 构建 data URI
+	dataURI := fmt.Sprintf("data:%s;base64,%s", mimeType, base64Data)
+
+	s.log.Infow("Converted local image to base64",
+		"local_path", localPath,
+		"full_path", fullPath,
+		"mime_type", mimeType,
+		"size_bytes", len(fileData),
+		"base64_length", len(base64Data))
+
+	return dataURI, nil
 }

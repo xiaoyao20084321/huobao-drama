@@ -8,19 +8,22 @@ import (
 	"time"
 
 	"github.com/drama-generator/backend/domain/models"
+	"github.com/drama-generator/backend/pkg/config"
 	"github.com/drama-generator/backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
 type DramaService struct {
-	db  *gorm.DB
-	log *logger.Logger
+	db      *gorm.DB
+	log     *logger.Logger
+	baseURL string
 }
 
-func NewDramaService(db *gorm.DB, log *logger.Logger) *DramaService {
+func NewDramaService(db *gorm.DB, cfg *config.Config, log *logger.Logger) *DramaService {
 	return &DramaService{
-		db:  db,
-		log: log,
+		db:      db,
+		log:     log,
+		baseURL: cfg.Storage.BaseURL,
 	}
 }
 
@@ -74,11 +77,13 @@ func (s *DramaService) GetDrama(dramaID string) (*models.Drama, error) {
 	err := s.db.Where("id = ? ", dramaID).
 		Preload("Characters").          // 加载Drama级别的角色
 		Preload("Scenes").              // 加载Drama级别的场景
+		Preload("Props").               // 加载Drama级别的道具
 		Preload("Episodes.Characters"). // 加载每个章节关联的角色
 		Preload("Episodes.Scenes").     // 加载每个章节关联的场景
 		Preload("Episodes.Storyboards", func(db *gorm.DB) *gorm.DB {
 			return db.Order("storyboards.storyboard_number ASC")
 		}).
+		Preload("Episodes.Storyboards.Props"). // 加载分镜关联的道具
 		First(&drama).Error
 
 	if err != nil {
@@ -107,6 +112,7 @@ func (s *DramaService) GetDrama(dramaID string) (*models.Drama, error) {
 		// 查询角色的图片生成状态
 		for j := range drama.Episodes[i].Characters {
 			var imageGen models.ImageGeneration
+			// 查询进行中或失败的任务状态
 			err := s.db.Where("character_id = ? AND (status = ? OR status = ?)",
 				drama.Episodes[i].Characters[j].ID, "pending", "processing").
 				Order("created_at DESC").
@@ -139,6 +145,7 @@ func (s *DramaService) GetDrama(dramaID string) (*models.Drama, error) {
 		// 查询场景的图片生成状态
 		for j := range drama.Episodes[i].Scenes {
 			var imageGen models.ImageGeneration
+			// 查询进行中或失败的任务状态
 			err := s.db.Where("scene_id = ? AND (status = ? OR status = ?)",
 				drama.Episodes[i].Scenes[j].ID, "pending", "processing").
 				Order("created_at DESC").
@@ -183,6 +190,9 @@ func (s *DramaService) GetDrama(dramaID string) (*models.Drama, error) {
 	for _, scene := range sceneMap {
 		drama.Scenes = append(drama.Scenes, *scene)
 	}
+
+	// 为所有场景的 local_path 添加 base_url 前缀
+	// s.addBaseURLToScenes(&drama)
 
 	return &drama, nil
 }
@@ -476,16 +486,37 @@ func (s *DramaService) SaveCharacters(dramaID string, req *SaveCharactersRequest
 	// 收集需要关联到章节的角色ID
 	var characterIDs []uint
 
-	// 创建新角色或复用已有角色
+	// 创建新角色或复用/更新已有角色
 	for _, char := range req.Characters {
+		// 1. 如果提供了ID，尝试更新已有角色
+		if char.ID > 0 {
+			var existing models.Character
+			if err := s.db.Where("id = ? AND drama_id = ?", char.ID, dramaIDUint).First(&existing).Error; err == nil {
+				// 更新角色信息
+				updates := map[string]interface{}{
+					"name":        char.Name,
+					"role":        char.Role,
+					"description": char.Description,
+					"personality": char.Personality,
+					"appearance":  char.Appearance,
+					"image_url":   char.ImageURL,
+				}
+				if err := s.db.Model(&existing).Updates(updates).Error; err != nil {
+					s.log.Errorw("Failed to update character", "error", err, "id", char.ID)
+				}
+				characterIDs = append(characterIDs, existing.ID)
+				continue
+			}
+		}
+
+		// 2. 如果没有ID但名字已存在，直接复用（可选：也可以选择更新）
 		if existingChar, exists := existingCharMap[char.Name]; exists {
-			// 角色已存在，直接复用
 			s.log.Infow("Character already exists, reusing", "name", char.Name, "character_id", existingChar.ID)
 			characterIDs = append(characterIDs, existingChar.ID)
 			continue
 		}
 
-		// 角色不存在，创建新角色
+		// 3. 角色不存在，创建新角色
 		character := models.Character{
 			DramaID:     dramaIDUint,
 			Name:        char.Name,
@@ -493,6 +524,7 @@ func (s *DramaService) SaveCharacters(dramaID string, req *SaveCharactersRequest
 			Description: char.Description,
 			Personality: char.Personality,
 			Appearance:  char.Appearance,
+			ImageURL:    char.ImageURL,
 		}
 
 		if err := s.db.Create(&character).Error; err != nil {
@@ -627,4 +659,25 @@ func (s *DramaService) SaveProgress(dramaID string, req *SaveProgressRequest) er
 
 	s.log.Infow("Progress saved", "drama_id", dramaID, "step", req.CurrentStep)
 	return nil
+}
+
+// addBaseURLToScenes 为剧本中所有场景的 local_path 添加 base_url 前缀
+func (s *DramaService) addBaseURLToScenes(drama *models.Drama) {
+	// 处理 drama.Scenes
+	for i := range drama.Scenes {
+		if drama.Scenes[i].LocalPath != nil && *drama.Scenes[i].LocalPath != "" {
+			fullPath := fmt.Sprintf("%s/%s", s.baseURL, *drama.Scenes[i].LocalPath)
+			drama.Scenes[i].LocalPath = &fullPath
+		}
+	}
+
+	// 处理 drama.Episodes[].Scenes
+	for i := range drama.Episodes {
+		for j := range drama.Episodes[i].Scenes {
+			if drama.Episodes[i].Scenes[j].LocalPath != nil && *drama.Episodes[i].Scenes[j].LocalPath != "" {
+				fullPath := fmt.Sprintf("%s/%s", s.baseURL, *drama.Episodes[i].Scenes[j].LocalPath)
+				drama.Episodes[i].Scenes[j].LocalPath = &fullPath
+			}
+		}
+	}
 }

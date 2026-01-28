@@ -1,6 +1,8 @@
+import { Prop } from './prop'
+
 export interface Drama {
   id: string
-  
+
   title: string
   description?: string
   genre?: string
@@ -18,6 +20,7 @@ export interface Drama {
   characters?: Character[]
   episodes?: Episode[]
   scenes?: Scene[]
+  props?: Prop[]
 }
 
 export type DramaStatus = 'draft' | 'planning' | 'production' | 'completed' | 'archived' | 'generating' | 'error'
@@ -36,6 +39,7 @@ export interface Character {
   seed_value?: string
   sort_order?: number
   image_url?: string
+  local_path?: string
   image_generation_status?: string
   image_generation_error?: string
   created_at: string
@@ -103,6 +107,7 @@ export interface Scene {
   storyboard_number?: number
   storyboard_count?: number
   image_url?: string
+  local_path?: string
   video_url?: string
   status: string
   image_generation_status?: string
