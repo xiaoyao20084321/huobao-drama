@@ -22,6 +22,8 @@ Huobao Drama 是一个基于 AI 的短剧自动化生产平台，实现从剧本
 
 火宝短剧商业版地址：[火宝短剧商业版](https://drama.chatfire.site/shortvideo)
 
+火宝小说生成：[火宝小说生成](https://marketing.chatfire.site/huobao-novel/)
+
 ### 🎯 核心价值
 
 - **🤖 AI 驱动**：使用大语言模型解析剧本，提取角色、场景和分镜信息

@@ -22,6 +22,8 @@ Huobao Drama は、脚本生成、キャラクターデザイン、絵コンテ�
 
 火宝短剧商业版地址：[火宝短剧商业版](https://drama.chatfire.site/shortvideo)
 
+火宝小说生成：[火宝小说生成](https://marketing.chatfire.site/huobao-novel/)
+
 ### 🎯 主要機能
 
 - **🤖 AI 駆動**: 大規模言語モデルを使用して脚本を解析し、キャラクター、シーン、絵コンテ情報を抽出
