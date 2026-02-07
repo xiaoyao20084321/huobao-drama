@@ -8,7 +8,9 @@
     >
       <template #left>
         <el-button text @click="goBack" class="back-btn">
-          <el-icon><ArrowLeft /></el-icon>
+          <el-icon>
+            <ArrowLeft />
+          </el-icon>
           <span>{{ $t("editor.backToEpisode") }}</span>
         </el-button>
         <span class="episode-title"
@@ -217,7 +219,9 @@
                         :src="getImageUrl(prop)"
                         :alt="prop.name"
                       />
-                      <el-icon v-else><Box /></el-icon>
+                      <el-icon v-else>
+                        <Box />
+                      </el-icon>
                     </div>
                     <div class="cast-name">{{ prop.name }}</div>
                     <div
@@ -440,9 +444,9 @@
                     <el-radio-button label="last">{{
                       $t("editor.lastFrame")
                     }}</el-radio-button>
-                    <el-radio-button label="panel">{{
+                    <!-- <el-radio-button label="panel">{{
                       $t("editor.panelFrame")
-                    }}</el-radio-button>
+                    }}</el-radio-button> -->
                     <el-radio-button label="action">{{
                       $t("editor.actionSequence")
                     }}</el-radio-button>
@@ -522,7 +526,9 @@
                 <!-- 生成结果 -->
                 <div
                   class="generation-result"
-                  v-if="generatedImages.length > 0"
+                  v-if="
+                    generatedImages.length > 0 || selectedFrameType === 'action'
+                  "
                 >
                   <div class="section-label">
                     {{ $t("editor.generationResult") }} ({{
@@ -530,43 +536,85 @@
                     }})
                   </div>
                   <div class="image-grid">
+                    <!-- 动作序列入口按钮 -->
+                    <div
+                      v-if="selectedFrameType === 'action'"
+                      class="image-item grid-entry-button"
+                      @click="showGridEditor = true"
+                    >
+                      <div class="grid-entry-placeholder">
+                        <el-icon :size="28" style="color: #ccc">
+                          <Plus />
+                        </el-icon>
+                      </div>
+                      <!-- <div class="image-info">
+                        <span class="frame-type-tag">{{
+                          $t("editor.createGridImage")
+                          }}</span>
+                      </div> -->
+                    </div>
                     <div
                       v-for="img in generatedImages"
                       :key="img.id"
-                      class="image-item"
+                      class="image-item-wrapper"
                     >
-                      <el-image
-                        v-if="hasImage(img)"
-                        :src="getImageUrl(img)"
-                        :preview-src-list="
-                          generatedImages
-                            .filter((i) => hasImage(i))
-                            .map((i) => getImageUrl(i)!)
-                        "
-                        :initial-index="
-                          generatedImages
-                            .filter((i) => i.image_url)
-                            .findIndex((i) => i.id === img.id)
-                        "
-                        fit="cover"
-                        preview-teleported
-                      />
-                      <div v-else class="image-placeholder">
-                        <el-icon :size="32">
-                          <Picture />
-                        </el-icon>
-                        <p>生成中...</p>
+                      <div
+                        class="image-item"
+                        :class="{
+                          'action-image-item': img.frame_type === 'action',
+                        }"
+                      >
+                        <el-image
+                          v-if="hasImage(img)"
+                          :src="getImageUrl(img)"
+                          :preview-src-list="
+                            generatedImages
+                              .filter((i) => hasImage(i))
+                              .map((i) => getImageUrl(i)!)
+                          "
+                          :initial-index="
+                            generatedImages
+                              .filter((i) => i.image_url)
+                              .findIndex((i) => i.id === img.id)
+                          "
+                          fit="cover"
+                          preview-teleported
+                        />
+                        <div v-else class="image-placeholder">
+                          <el-icon :size="32">
+                            <Picture />
+                          </el-icon>
+                          <p>{{ getStatusText(img.status) }}</p>
+                        </div>
+                        <div class="image-actions" v-if="hasImage(img)">
+                          <!-- 动作序列图片裁剪图标 -->
+                          <div
+                            v-if="img.frame_type === 'action' && hasImage(img)"
+                            class="crop-icon-overlay"
+                            @click.stop="openCropDialog(img)"
+                          >
+                            <el-icon :size="18" color="var(--text-primary)">
+                              <Crop />
+                            </el-icon>
+                          </div>
+                          <div v-else></div>
+                          <!-- 删除按钮 -->
+                          <div
+                            v-if="hasImage(img)"
+                            class="delete-icon-overlay"
+                            @click.stop="handleDeleteImage(img)"
+                          >
+                            <el-icon :size="18" color="red">
+                              <DeleteFilled />
+                            </el-icon>
+                          </div>
+                        </div>
                       </div>
-                      <div class="image-info">
-                        <el-tag
-                          :type="getStatusType(img.status)"
-                          size="small"
-                          >{{ getStatusText(img.status) }}</el-tag
-                        >
-                        <span v-if="img.frame_type" class="frame-type-tag">{{
-                          getFrameTypeText(img.frame_type)
-                        }}</span>
-                      </div>
+                      <!-- <div class="image-status">
+                                                <el-tag :type="getStatusType(img.status)" size="small">{{
+                                                    getStatusText(img.status)
+                                                }}</el-tag>
+                                            </div> -->
                     </div>
                   </div>
                 </div>
@@ -712,7 +760,7 @@
                     >
                       <el-radio-button label="first">首帧</el-radio-button>
                       <el-radio-button label="last">尾帧</el-radio-button>
-                      <el-radio-button label="panel">分镜板</el-radio-button>
+                      <!-- <el-radio-button label="panel">分镜板</el-radio-button> -->
                       <el-radio-button label="action">动作序列</el-radio-button>
                       <el-radio-button label="key">关键帧</el-radio-button>
                     </el-radio-group>
@@ -1460,168 +1508,64 @@
                     <span></span>
                     生成结果 ({{ generatedVideos.length }})
                   </div>
-                  <div
-                    class="image-grid"
-                    style="
-                      display: grid;
-                      grid-template-columns: repeat(
-                        auto-fill,
-                        minmax(140px, 1fr)
-                      );
-                      gap: 10px;
-                    "
-                  >
+                  <div class="image-grid">
                     <div
                       v-for="video in generatedVideos"
                       :key="video.id"
-                      class="image-item video-item"
-                      style="
-                        position: relative;
-                        border-radius: 8px;
-                        overflow: hidden;
-                        background: #fff;
-                        border: 1px solid #e8e8e8;
-                        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-                        cursor: pointer;
-                        transition: all 0.2s ease;
-                      "
+                      class="image-item-wrapper"
                     >
-                      <div
-                        class="video-thumbnail"
-                        v-if="video.video_url"
-                        style="
-                          position: relative;
-                          width: 100%;
-                          aspect-ratio: 16/9;
-                          overflow: hidden;
-                          cursor: pointer;
-                        "
-                        @mouseenter="
-                          (e) =>
-                            (e.currentTarget.querySelector(
-                              '.play-overlay',
-                            ).style.opacity = '1')
-                        "
-                        @mouseleave="
-                          (e) =>
-                            (e.currentTarget.querySelector(
-                              '.play-overlay',
-                            ).style.opacity = '0')
-                        "
-                        @click="playVideo(video)"
-                      >
-                        <video
-                          :src="getVideoUrl(video)"
-                          preload="metadata"
-                          style="
-                            width: 100%;
-                            height: 100%;
-                            object-fit: cover;
-                            display: block;
-                            pointer-events: none;
-                          "
-                        />
+                      <div class="image-item video-item">
                         <div
-                          class="play-overlay"
-                          style="
-                            position: absolute;
-                            top: 0;
-                            left: 0;
-                            right: 0;
-                            bottom: 0;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            background: rgba(0, 0, 0, 0.3);
-                            opacity: 0;
-                            transition: opacity 0.2s;
-                          "
+                          v-if="video.video_url"
+                          class="video-thumbnail"
+                          @click="playVideo(video)"
                         >
-                          <el-icon
-                            :size="32"
-                            color="#fff"
-                            style="
-                              filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
-                            "
-                          >
-                            <VideoPlay />
+                          <video :src="getVideoUrl(video)" preload="metadata" />
+                          <div class="play-overlay">
+                            <el-icon :size="40" color="#fff">
+                              <VideoPlay />
+                            </el-icon>
+                          </div>
+                        </div>
+                        <div v-else class="image-placeholder">
+                          <el-icon :size="32">
+                            <VideoCamera />
                           </el-icon>
+                          <p>{{ getStatusText(video.status) }}</p>
                         </div>
-                      </div>
-                      <div
-                        v-else
-                        class="image-placeholder"
-                        style="
-                          width: 100%;
-                          aspect-ratio: 16/9;
-                          display: flex;
-                          flex-direction: column;
-                          align-items: center;
-                          justify-content: center;
-                          gap: 8px;
-                          background: linear-gradient(
-                            135deg,
-                            #f5f7fa 0%,
-                            #e8ecf0 100%
-                          );
-                          color: #909399;
-                        "
-                      >
-                        <el-icon :size="32">
-                          <VideoCamera />
-                        </el-icon>
-                        <p style="margin: 0; font-size: 11px">生成中...</p>
-                      </div>
-                      <div
-                        class="image-info"
-                        style="
-                          position: absolute;
-                          bottom: 0;
-                          left: 0;
-                          right: 0;
-                          padding: 6px 8px;
-                          background: linear-gradient(
-                            to top,
-                            rgba(0, 0, 0, 0.75),
-                            rgba(0, 0, 0, 0.2) 70%,
-                            transparent
-                          );
-                          display: flex;
-                          justify-content: space-between;
-                          align-items: center;
-                          gap: 4px;
-                        "
-                      >
-                        <div
-                          style="display: flex; align-items: center; gap: 4px"
-                        >
-                          <el-tag
-                            :type="getStatusType(video.status)"
-                            size="small"
-                            style="
-                              font-size: 10px;
-                              height: 20px;
-                              padding: 0 6px;
-                            "
-                            >{{ getStatusText(video.status) }}</el-tag
-                          >
-                        </div>
-                        <div style="display: flex; gap: 4px">
-                          <el-button
-                            v-if="
-                              video.status === 'completed' && video.video_url
-                            "
-                            type="success"
-                            size="small"
-                            :loading="addingToAssets.has(video.id)"
+                        <!-- 视频操作按钮 -->
+                        <div class="video-actions">
+                          <div
+                            v-if="video.status === 'completed'"
+                            class="add-to-assets-button"
                             @click.stop="addVideoToAssets(video)"
                           >
-                            {{
-                              addingToAssets.has(video.id)
-                                ? "添加中..."
-                                : "添加到素材库"
-                            }}
-                          </el-button>
+                            <el-icon
+                              :size="18"
+                              color="var(--text-primary)"
+                              v-if="!addingToAssets.has(video.id)"
+                            >
+                              <FolderAdd />
+                            </el-icon>
+                            <el-icon
+                              :size="18"
+                              color="var(--text-primary)"
+                              v-else
+                              class="is-loading"
+                            >
+                              <Loading />
+                            </el-icon>
+                          </div>
+                          <div v-else></div>
+                          <!-- 删除按钮 -->
+                          <div
+                            class="delete-video-button"
+                            @click.stop="handleDeleteVideo(video)"
+                          >
+                            <el-icon :size="18" color="red">
+                              <DeleteFilled />
+                            </el-icon>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1827,8 +1771,8 @@
     >
       <div class="character-image-preview" v-if="previewCharacter">
         <img
-          v-if="previewCharacter.image_url"
-          :src="previewCharacter.image_url"
+          v-if="previewCharacter.local_path"
+          :src="getImageUrl(previewCharacter)"
           :alt="previewCharacter.name"
         />
         <el-empty v-else description="暂无图片" />
@@ -1869,7 +1813,11 @@
           @click="toggleCharacterInShot(char.id)"
         >
           <div class="character-avatar-large">
-            <img v-if="char.image_url" :src="char.image_url" :alt="char.name" />
+            <img
+              v-if="char.local_path"
+              :src="getImageUrl(char)"
+              :alt="char.name"
+            />
             <span v-else>{{ char.name?.[0] || "?" }}</span>
           </div>
           <div class="character-info">
@@ -1906,8 +1854,14 @@
           @click="togglePropInShot(prop.id)"
         >
           <div class="character-avatar-large">
-            <img v-if="prop.image_url" :src="prop.image_url" :alt="prop.name" />
-            <el-icon v-else :size="32"><Box /></el-icon>
+            <img
+              v-if="prop.local_path"
+              :src="getImageUrl(prop)"
+              :alt="prop.name"
+            />
+            <el-icon v-else :size="32">
+              <Box />
+            </el-icon>
           </div>
           <div class="character-info">
             <div class="character-name">{{ prop.name }}</div>
@@ -2033,6 +1987,22 @@
         </div>
       </div>
     </el-dialog>
+
+    <!-- 宫格图片编辑器组件 -->
+    <GridImageEditor
+      v-model="showGridEditor"
+      :storyboard-id="currentStoryboard?.id || 0"
+      :drama-id="dramaId"
+      :all-images="allGeneratedImages"
+      @success="handleGridImageSuccess"
+    />
+
+    <!-- 图片裁剪对话框 -->
+    <ImageCropDialog
+      v-model="showCropDialog"
+      :image-url="cropImageUrl"
+      @save="handleCropSave"
+    />
   </div>
 </template>
 
@@ -2074,6 +2044,8 @@ import {
   Delete,
   Connection,
   Box,
+  Crop,
+  FolderAdd,
 } from "@element-plus/icons-vue";
 import { dramaAPI } from "@/api/drama";
 import { propAPI } from "@/api/prop";
@@ -2090,8 +2062,9 @@ import type { AIServiceConfig } from "@/types/ai";
 import type { Asset } from "@/types/asset";
 import type { VideoMerge } from "@/api/videoMerge";
 import VideoTimelineEditor from "@/components/editor/VideoTimelineEditor.vue";
+import GridImageEditor from "@/components/editor/GridImageEditor.vue";
 import type { Drama, Episode, Storyboard } from "@/types/drama";
-import { AppHeader } from "@/components/common";
+import { AppHeader, ImageCropDialog } from "@/components/common";
 import { getImageUrl, hasImage, getVideoUrl } from "@/utils/image";
 
 const route = useRoute();
@@ -2110,7 +2083,7 @@ const availableScenes = ref<any[]>([]);
 const props = ref<any[]>([]);
 const showPropSelector = ref(false);
 
-const currentStoryboardId = ref<number | null>(null);
+const currentStoryboardId = ref<string | null>(null);
 const activeTab = ref("shot");
 const showSceneSelector = ref(false);
 const showCharacterSelector = ref(false);
@@ -2149,6 +2122,17 @@ const isSwitchingFrameType = ref(false); // 标志位：是否正在切换帧类
 const loadingImages = ref(false);
 let pollingTimer: any = null;
 let pollingFrameType: FrameType | null = null; // 记录正在轮询的帧类型
+
+// 宫格图片编辑器状态
+const showGridEditor = ref(false);
+
+// 所有已生成的图片（用于宫格编辑器选择）
+const allGeneratedImages = ref<ImageGeneration[]>([]);
+
+// 图片裁剪对话框状态
+const showCropDialog = ref(false);
+const cropImageUrl = ref<string>("");
+const cropImageData = ref<ImageGeneration | null>(null);
 
 // 视频生成相关状态
 const videoDuration = ref(5); // 默认5秒，会根据镜头duration自动更新
@@ -2615,6 +2599,9 @@ watch(currentStoryboard, async (newStoryboard) => {
   // 加载该分镜的图片列表（根据当前选择的帧类型）
   await loadStoryboardImages(newStoryboard.id, selectedFrameType.value);
 
+  // 加载所有已生成的图片（用于宫格编辑器）
+  await loadAllGeneratedImages();
+
   // 加载视频参考图片（所有帧类型）
   await loadVideoReferenceImages(newStoryboard.id);
 
@@ -2850,10 +2837,7 @@ const extractFramePrompt = async () => {
     } else if (result.multi_frame && result.multi_frame.frames) {
       // 多帧情况，将所有帧的prompt合并
       extractedPrompt = result.multi_frame.frames
-        .map(
-          (frame: any, index: number) =>
-            `${frame.description}: ${frame.prompt}`,
-        )
+        .map((frame: any) => frame.prompt)
         .join("\n\n");
     }
 
@@ -2912,7 +2896,7 @@ const getFrameTypeLabel = (frameType: string): string => {
 
 // 加载分镜的图片列表
 const loadStoryboardImages = async (
-  storyboardId: number,
+  storyboardId: string | number,
   frameType?: string,
 ) => {
   loadingImages.value = true;
@@ -3129,6 +3113,34 @@ const addVideoToAssets = async (video: VideoGeneration) => {
     ElMessage.error(error.message || "添加失败");
   } finally {
     addingToAssets.value.delete(video.id);
+  }
+};
+
+// 删除视频
+const handleDeleteVideo = async (video: VideoGeneration) => {
+  if (!currentStoryboard.value) return;
+
+  try {
+    await ElMessageBox.confirm(
+      "确定要删除这个视频吗？删除后无法恢复。",
+      "确认删除",
+      {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      },
+    );
+
+    await videoAPI.deleteVideo(video.id);
+    ElMessage.success("删除成功");
+
+    // 重新加载当前镜头的视频列表
+    await loadStoryboardVideos(Number(currentStoryboard.value.id));
+  } catch (error: any) {
+    if (error !== "cancel") {
+      console.error("删除视频失败:", error);
+      ElMessage.error(error.message || "删除失败");
+    }
   }
 };
 
@@ -3478,12 +3490,37 @@ const startVideoPolling = () => {
     }
 
     try {
+      // 保存旧的视频列表用于对比
+      const oldVideos = [...generatedVideos.value];
+
       const result = await videoAPI.listVideos({
         storyboard_id: currentStoryboard.value.id.toString(),
         page: 1,
         page_size: 50,
       });
       generatedVideos.value = result.items || [];
+
+      // 检测是否有视频从 processing 变为 completed
+      const hasNewlyCompleted = generatedVideos.value.some((newVideo) => {
+        const oldVideo = oldVideos.find((v) => v.id === newVideo.id);
+        return (
+          oldVideo &&
+          (oldVideo.status === "pending" || oldVideo.status === "processing") &&
+          newVideo.status === "completed"
+        );
+      });
+
+      // 如果有视频完成，重新加载分镜列表以更新 duration
+      if (hasNewlyCompleted && episodeId.value) {
+        try {
+          const storyboardsRes = await dramaAPI.getStoryboards(
+            episodeId.value.toString(),
+          );
+          storyboards.value = storyboardsRes?.storyboards || [];
+        } catch (error) {
+          console.error("重新加载分镜列表失败:", error);
+        }
+      }
 
       // 如果没有进行中的任务，停止轮询
       const hasPendingOrProcessing = generatedVideos.value.some(
@@ -3662,12 +3699,12 @@ const selectScene = async (sceneId: number) => {
   }
 };
 
-const selectStoryboard = (id: number) => {
+const selectStoryboard = (id: string) => {
   currentStoryboardId.value = id;
 };
 
 const handleTimelineSelect = (sceneId: number) => {
-  selectStoryboard(sceneId);
+  selectStoryboard(String(sceneId));
 };
 
 const togglePlay = () => {
@@ -3765,6 +3802,111 @@ const uploadImage = () => {
     }
   };
   input.click();
+};
+
+// 删除图片
+const handleDeleteImage = async (img: ImageGeneration) => {
+  if (!currentStoryboard.value) return;
+
+  try {
+    await ElMessageBox.confirm("确定要删除这张图片吗？", "确认删除", {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "warning",
+    });
+
+    await imageAPI.deleteImage(img.id);
+    ElMessage.success("删除成功");
+
+    // 重新加载当前帧类型的图片列表
+    await loadStoryboardImages(
+      currentStoryboard.value.id,
+      selectedFrameType.value,
+    );
+  } catch (error: any) {
+    if (error !== "cancel") {
+      console.error("删除图片失败:", error);
+      ElMessage.error(error.message || "删除失败");
+    }
+  }
+};
+
+// 加载所有已生成的图片（用于宫格编辑器）
+const loadAllGeneratedImages = async () => {
+  if (!currentStoryboard.value) return;
+
+  try {
+    const result = await imageAPI.listImages({
+      storyboard_id: currentStoryboard.value.id,
+      page: 1,
+      page_size: 100,
+    });
+    allGeneratedImages.value = result.items || [];
+  } catch (error: any) {
+    console.error("加载所有图片失败:", error);
+  }
+};
+
+// 处理宫格图片创建成功
+const handleGridImageSuccess = async () => {
+  if (currentStoryboard.value) {
+    // 刷新动作序列图片列表
+    await loadStoryboardImages(currentStoryboard.value.id, "action");
+    // 重新加载所有图片
+    await loadAllGeneratedImages();
+  }
+};
+
+// 打开裁剪对话框
+const openCropDialog = (img: ImageGeneration) => {
+  cropImageData.value = img;
+  cropImageUrl.value = getImageUrl(img) || "";
+  showCropDialog.value = true;
+};
+
+// 处理裁剪保存
+const handleCropSave = async (images: { blob: Blob; frameType: string }[]) => {
+  if (!currentStoryboard.value || !cropImageData.value) return;
+
+  try {
+    // 将 Blob 转换为 base64 data URL
+    const convertBlobToBase64 = (blob: Blob): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    };
+
+    // 上传裁剪后的图片并创建新的图片生成记录
+    for (const img of images) {
+      // 将 Blob 转换为 base64
+      const imageUrl = await convertBlobToBase64(img.blob);
+
+      // 调用上传接口
+      await imageAPI.uploadImage({
+        storyboard_id: currentStoryboard.value.id,
+        drama_id: Number(dramaId),
+        frame_type: img.frameType,
+        image_url: imageUrl,
+        prompt: cropImageData.value.prompt || "",
+      });
+    }
+
+    ElMessage.success("裁剪图片保存成功");
+
+    // 刷新图片列表 - 刷新所有帧类型的图片，确保新裁剪的图片能在视频生成tab中被选择到
+    if (currentStoryboard.value) {
+      // 刷新当前镜头的所有图片（不限制帧类型）
+      await loadStoryboardImages(currentStoryboard.value.id);
+      // 刷新所有生成的图片列表
+      await loadAllGeneratedImages();
+    }
+  } catch (error) {
+    console.error("Failed to save cropped images:", error);
+    ElMessage.error("保存裁剪图片失败");
+  }
 };
 
 const goBack = () => {
@@ -4637,6 +4779,7 @@ onBeforeUnmount(() => {
   gap: 16px;
   max-height: 500px;
   overflow-y: auto;
+  padding: 12px;
 
   .character-card {
     position: relative;
@@ -5110,6 +5253,12 @@ onBeforeUnmount(() => {
       grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
       gap: 10px;
 
+      .image-item-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
       .image-item {
         position: relative;
         border-radius: 8px;
@@ -5119,11 +5268,17 @@ onBeforeUnmount(() => {
         transition: all 0.2s ease;
         cursor: pointer;
         box-shadow: var(--shadow-sm);
+        height: 150px;
 
         &:hover {
           transform: translateY(-2px);
           box-shadow: var(--shadow-md);
-          border-color: var(--accent);
+          // border-color: var(--accent);
+
+          .image-actions {
+            transform: translateY(0);
+            opacity: 0.7;
+          }
         }
 
         :deep(.el-image) {
@@ -5131,6 +5286,7 @@ onBeforeUnmount(() => {
           aspect-ratio: 16 / 9;
           background: var(--bg-secondary);
           display: block;
+          height: 100%;
         }
 
         .image-placeholder {
@@ -5145,6 +5301,7 @@ onBeforeUnmount(() => {
           color: var(--text-muted);
           position: relative;
           overflow: hidden;
+          height: 100%;
 
           &::before {
             content: "";
@@ -5154,7 +5311,7 @@ onBeforeUnmount(() => {
             background: linear-gradient(
               45deg,
               transparent 30%,
-              rgba(255, 255, 255, 0.3) 50%,
+              var(--border-secondary) 50%,
               transparent 70%
             );
             animation: shimmer 2s infinite;
@@ -5177,42 +5334,52 @@ onBeforeUnmount(() => {
           }
         }
 
-        .image-info {
+        .image-actions {
           position: absolute;
           bottom: 0;
           left: 0;
-          right: 0;
-          padding: 6px 8px;
-          background: linear-gradient(
-            to top,
-            rgba(0, 0, 0, 0.75),
-            rgba(0, 0, 0, 0.2) 70%,
-            transparent
-          );
+          width: 100%;
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 4px;
+          background-color: var(--bg-primary);
+          opacity: 0;
+          padding: 0 8px;
+          height: 32px;
+          transform: translateY(100%);
+          transition:
+            transform 0.3s ease,
+            opacity 0.2s ease;
 
-          :deep(.el-tag) {
-            backdrop-filter: blur(8px);
-            font-size: 10px;
-            height: 20px;
-            padding: 0 6px;
-          }
-
-          .frame-type-tag {
-            padding: 2px 6px;
+          .crop-icon-overlay,
+          .delete-icon-overlay {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             border-radius: 4px;
-            font-size: 10px;
-            font-weight: 500;
-            background: rgba(255, 255, 255, 0.25);
-            color: white;
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
+            transition: all 0.2s ease;
+
+            &:hover {
+              cursor: pointer;
+              background: var(--bg-secondary);
+              transform: scale(1.1);
+            }
           }
+        }
+      }
+
+      .image-status {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 2px 0;
+
+        :deep(.el-tag) {
+          font-size: 10px;
+          height: 20px;
+          padding: 0 6px;
         }
       }
     }
@@ -5291,12 +5458,17 @@ onBeforeUnmount(() => {
         border: 1px solid #e8e8e8;
         transition: all 0.2s ease;
         cursor: pointer;
+        height: 150px;
         box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 
         &:hover {
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-          border-color: #409eff;
+
+          .video-actions {
+            transform: translateY(0);
+            opacity: 0.7;
+          }
         }
 
         .image-placeholder {
@@ -5311,6 +5483,7 @@ onBeforeUnmount(() => {
           color: #909399;
           position: relative;
           overflow: hidden;
+          height: 100%;
 
           &::before {
             content: "";
@@ -5320,7 +5493,7 @@ onBeforeUnmount(() => {
             background: linear-gradient(
               45deg,
               transparent 30%,
-              rgba(255, 255, 255, 0.3) 50%,
+              var(--border-secondary) 50%,
               transparent 70%
             );
             animation: shimmer 2s infinite;
@@ -5385,7 +5558,7 @@ onBeforeUnmount(() => {
         &.video-item .video-thumbnail {
           position: relative;
           width: 100%;
-          aspect-ratio: 16 / 9;
+          height: 100%;
           overflow: hidden;
           cursor: pointer;
 
@@ -5417,6 +5590,45 @@ onBeforeUnmount(() => {
 
           &:hover .play-overlay {
             opacity: 1;
+          }
+        }
+
+        .video-actions {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background-color: var(--bg-primary);
+          opacity: 0;
+          padding: 0 8px;
+          height: 32px;
+          transform: translateY(100%);
+          transition:
+            transform 0.3s ease,
+            opacity 0.2s ease;
+
+          .add-to-assets-button,
+          .delete-video-button {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+
+            &:hover {
+              background: var(--bg-secondary);
+              transform: scale(1.1);
+            }
+
+            .is-loading {
+              animation: rotate 1s linear infinite;
+            }
           }
         }
       }
@@ -5526,6 +5738,7 @@ onBeforeUnmount(() => {
       transform: scale(1.1);
     }
   }
+
   .reference-images-section {
     margin-top: 12px;
 
@@ -5928,7 +6141,247 @@ onBeforeUnmount(() => {
   line-height: 1.5;
   color: var(--text-secondary);
   word-break: break-word;
-  max-height: 80px;
+  max-height: 300px;
   overflow-y: auto;
+}
+
+/* 动作序列图片裁剪图标样式 */
+.action-image-item {
+  position: relative;
+}
+
+/* .crop-icon-overlay {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 28px;
+  height: 28px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 10;
+} */
+
+.action-image-item:hover .crop-icon-overlay {
+  opacity: 1;
+}
+
+.crop-icon-overlay:hover {
+  /* background: var(--accent); */
+  transform: scale(1.1);
+}
+
+/* 删除按钮样式 */
+/* .delete-icon-overlay {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  width: 28px;
+  height: 28px;
+  background: rgba(220, 38, 38, 0.9);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 10;
+} */
+
+.image-item:hover .delete-icon-overlay {
+  opacity: 1;
+}
+
+.delete-icon-overlay:hover {
+  /* background: rgba(220, 38, 38, 1); */
+  transform: scale(1.1);
+}
+
+/* 宫格图片入口按钮样式 */
+.grid-entry-button {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none !important;
+  min-height: 88px;
+}
+
+.grid-entry-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+}
+
+.grid-entry-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border: 2px dashed var(--border-primary);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  transition: all 0.3s ease;
+}
+
+.grid-entry-button:hover .grid-entry-placeholder {
+  border-color: var(--accent);
+  background: var(--bg-card);
+}
+
+/* 宫格图片编辑器样式 */
+.creation-mode-selector,
+.grid-type-selector {
+  margin-bottom: 16px;
+}
+
+.grid-editor {
+  margin-bottom: 20px;
+}
+
+.grid-container {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-primary);
+}
+
+.grid-container.grid-4 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.grid-container.grid-6 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.grid-container.grid-9 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.grid-cell {
+  position: relative;
+  aspect-ratio: 1;
+  border: 2px dashed var(--border-primary);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: var(--bg-card);
+}
+
+.grid-cell:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.2);
+}
+
+.grid-cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.grid-cell-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+}
+
+.grid-cell-placeholder p {
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.grid-cell-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.grid-cell:hover .grid-cell-actions {
+  opacity: 1;
+}
+
+.grid-cell-actions .el-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.grid-cell-actions .el-icon:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.1);
+}
+
+.grid-controls {
+  display: flex;
+  gap: 12px;
+}
+
+/* 图片选择器样式 */
+.image-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.image-selector-item {
+  position: relative;
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.image-selector-item:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+  transform: translateY(-2px);
+}
+
+.image-selector-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  font-size: 12px;
+  text-align: center;
+}
+
+.grid-preview-container {
+  text-align: center;
+}
+
+.grid-preview-container img {
+  max-width: 100%;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 </style>
