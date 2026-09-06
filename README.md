@@ -14,7 +14,7 @@
 
 **文本 · 图片 · 视频全部 AI 能力，一个 Key 即可开通**
 
-部署完成后在「设置 → 火宝快捷配置」粘贴 Key，一键写入三条推荐配置，开箱即用
+部署完成后在「设置 → 火宝快捷配置」粘贴 Key，一键写入推荐配置，开箱即用
 
 </div>
 
@@ -88,7 +88,7 @@ docker/     — init.sql 数据库初始化脚本(可选，启动时自动建表
 |---|---|
 | **文本** | OpenAI(兼容接口)、Gemini |
 | **图片** | OpenAI、Gemini、火山引擎 |
-| **视频** | 火山引擎 Seedance 2.0(标准 / Fast / Mini) |
+| **视频** | 火山引擎 Seedance 2.0、MiniMax H3、阿里云百炼 Wan 3.0 (Prime / 标准) |
 
 ---
 
@@ -116,6 +116,7 @@ docker/     — init.sql 数据库初始化脚本(可选，启动时自动建表
 | `MYSQL_DATABASE` | `huobao_drama` | 同上 |
 | `PORT` | `5679` | 后端服务端口 |
 | `STORAGE_PATH` | `./data/static` | 生成文件存储目录 |
+| `PUBLIC_BASE_URL` | — | 使用本地参考视频、音频或文件时，供上游模型访问 `static/` 素材的公网地址 |
 
 > **说明**：AI 服务的 API Key、Base URL 和模型参数全部在 Web 界面的「设置」页配置并入库，不在配置文件/环境变量中维护。
 
@@ -185,8 +186,32 @@ DATABASE_URL=mysql://huobao:huobao@127.0.0.1:3306/huobao_drama npm start
 启动后所有 AI 功能（文本/生图/视频）都需要先配置模型服务，未配置时页面顶部会有横幅引导：
 
 1. 打开「设置」页
-2. 在「火宝快捷配置」中粘贴 Huobao API Key（[前往 api.chatfire.site 获取](https://api.chatfire.site)），一键写入文本、图片、视频三条推荐配置
+2. 在「火宝快捷配置」中粘贴 Huobao API Key（[前往 api.chatfire.site 获取](https://api.chatfire.site)），一键写入文本、图片和视频推荐配置（视频包含 Seedance、Wan 3.0 与 MiniMax）
 3. 或使用「手动模板」按厂商逐个添加，支持连通性测试
+
+Wan 3.0 可直接通过「火宝快捷配置」接入 ChatFire 网关；若直连阿里云，则选择「阿里云百炼 Wan 3.0」模板，将 Base URL 中的 `{WorkspaceId}` 替换为真实业务空间 ID。直连时 Base URL、API Key 与模型必须属于同一地域。
+
+`POST /api/v1/tasks` 的 Wan 3.0 请求可直接使用官方入参结构（另加项目任务类型 `type`）：
+
+```json
+{
+  "type": "video",
+  "model": "wan3.0-video-prime",
+  "input": {
+    "prompt": "图1中的人物走进房间",
+    "media": [{ "type": "reference_image", "url": "https://example.com/ref.png" }]
+  },
+  "parameters": {
+    "resolution": "1080P",
+    "ratio": "16:9",
+    "duration": 5,
+    "audio": true,
+    "seed": -1,
+    "prompt_extend": true,
+    "watermark": false
+  }
+}
+```
 
 配置完成横幅自动消失，即可开始创建剧集生产。
 
@@ -229,7 +254,7 @@ docker compose down
 
 ```bash
 # 拉取镜像
-docker pull huobao/huobao-drama:3.0.0
+docker pull huobao/huobao-drama:3.1.0
 
 # 运行(MySQL 需另行准备,通过 DATABASE_URL 指向;命名卷自动从镜像初始化 skills 等内容)
 docker run -d \
@@ -239,7 +264,7 @@ docker run -d \
   -v huobao-workspace:/app/backend/workspace \
   -e DATABASE_URL=mysql://huobao:huobao@host.docker.internal:3306/huobao_drama \
   --restart unless-stopped \
-  huobao/huobao-drama:3.0.0
+  huobao/huobao-drama:3.1.0
 
 # 查看日志
 docker logs -f huobao-drama
@@ -384,6 +409,16 @@ A: 后端会在首次启动时自动创建所有表，检查日志确认初始�
 
 ## 📋 更新日志
 
+### v3.1.0 (2026-09)
+
+- 新增阿里云百炼 Wan 3.0 视频模型（Prime / 标准，支持官方 input.media/parameters 入参）
+- 工作台顶栏新增分辨率选择器，按厂商显示原生档位（Seedance 480p/720p、MiniMax 768P/2K、Wan 480P/720P/1080P）
+- 默认视频模型调整为 Seedance 2.0 Mini
+- 修复切换视频模型时厂商/模型错配导致的生成报错
+- 批量视频：选择模式 + 生成前确认（镜头数/总时长/模型/分辨率），失败任务一键重试
+- 分镜时长在视频生成参数区直接编辑保存，单次/批量生成统一生效
+- 真人/敏感内容审核失败时提示切换模型重试
+
 ### v3.0.0 (2026-08)
 
 #### 🚀 部署与体验优化
@@ -396,10 +431,10 @@ A: 后端会在首次启动时自动创建所有表，检查日志确认初始�
   - 新增 `docker/init.sql` 及导出脚本（DBA 审核 / 预建表）
 - 首次使用引导
   - 未配置 AI 服务时全站顶部横幅提示并引导至设置页
-  - 设置页新增「火宝快捷配置」：一个 Key 写入文本/图片/视频三条推荐配置
+  - 设置页新增「火宝快捷配置」：一个 Key 写入文本/图片/视频推荐配置
   - 未配置模型的报错中文化并指引设置页
 - 视频模型默认调整为 Seedance 2.0 Fast
-- 厂商收敛：仅保留 OpenAI / Gemini / 火山引擎
+- 厂商支持：OpenAI / Gemini / 火山引擎 / MiniMax / 阿里云百炼
 - 工作台：任务列表抽屉、流水线大环节状态、选择性拼接（拼接前校验视频文件存在）
 - 素材库改版、@提及优化、剧集列表重构
 
