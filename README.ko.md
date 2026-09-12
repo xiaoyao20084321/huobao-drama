@@ -20,6 +20,7 @@
 배포 후 「설정 → 火宝快捷 설정」에 Key 를 붙여넣으면 추천 설정 3개가 한 번에 입력됩니다
 
 <h3>📥 <a href="https://github.com/chatfire-AI/huobao-drama/releases/latest">데스크톱 앱 다운로드 (macOS / Windows)</a></h3>
+<h3>🌐 <a href="https://www.chatfire.site">공식 웹사이트</a></h3>
 
 </div>
 
@@ -283,13 +284,15 @@ cd backend && npx tsx scripts/import-mysql-to-sqlite.ts
 
 ### 🖥️ 데스크톱 앱(권장)
 
-**⬇️ 빌드된 설치 파일: [GitHub Releases](https://github.com/chatfire-AI/huobao-drama/releases/latest)**
+**⬇️ 빌드된 설치 파일: [GitHub Releases](https://github.com/chatfire-AI/huobao-drama/releases/latest) · [중국용 미러(Tencent COS)](https://installer.chatfire.site/huobao-drama/v4.0.0/)**
 
 | 플랫폼 | 다운로드 파일 |
 |---|---|
-| macOS(Apple Silicon, M 시리즈) | `HuobaoDrama-<버전>-arm64.dmg` |
-| macOS(Intel) | `HuobaoDrama-<버전>.dmg` |
-| Windows | `HuobaoDrama Setup <버전>.exe` |
+| macOS(Apple Silicon, M 시리즈) | `HuobaoDrama-4.0.0-arm64.dmg` |
+| macOS(Intel) | `HuobaoDrama-4.0.0.dmg` |
+| Windows | `HuobaoDrama.Setup.4.0.0.exe` |
+
+> 중국 본토에서는 GitHub이 불안정하므로 Tencent COS 미러를 이용하세요. 앱 내 업데이터도 COS를 우선하고 GitHub으로 폴백합니다.
 
 빌드 불필요 — dmg/exe를 다운로드해 바로 설치하면 됩니다. 설치된 클라이언트는 내장 업데이터로 자동 업데이트됩니다. (소스에서 직접 패키징하려면 아래 명령을 참조하세요.)
 

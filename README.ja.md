@@ -20,6 +20,7 @@
 デプロイ後、「設定 → 火宝クイック設定」に Key を貼るだけで、3 つの推奨設定をワンクリックで書き込み
 
 <h3>📥 <a href="https://github.com/chatfire-AI/huobao-drama/releases/latest">デスクトップ版をダウンロード（macOS / Windows）</a></h3>
+<h3>🌐 <a href="https://www.chatfire.site">公式サイト</a></h3>
 
 </div>
 
@@ -283,13 +284,15 @@ cd backend && npx tsx scripts/import-mysql-to-sqlite.ts
 
 ### 🖥️ デスクトップアプリ（推奨）
 
-**⬇️ ビルド済みインストーラー: [GitHub Releases](https://github.com/chatfire-AI/huobao-drama/releases/latest)**
+**⬇️ ビルド済みインストーラー: [GitHub Releases](https://github.com/chatfire-AI/huobao-drama/releases/latest) · [中国向けミラー（Tencent COS）](https://installer.chatfire.site/huobao-drama/v4.0.0/)**
 
 | プラットフォーム | ダウンロードファイル |
 |---|---|
-| macOS（Apple Silicon、M シリーズ） | `HuobaoDrama-<バージョン>-arm64.dmg` |
-| macOS（Intel） | `HuobaoDrama-<バージョン>.dmg` |
-| Windows | `HuobaoDrama Setup <バージョン>.exe` |
+| macOS（Apple Silicon、M シリーズ） | `HuobaoDrama-4.0.0-arm64.dmg` |
+| macOS（Intel） | `HuobaoDrama-4.0.0.dmg` |
+| Windows | `HuobaoDrama.Setup.4.0.0.exe` |
+
+> 中国本土では GitHub が不安定なため、Tencent COS ミラーをご利用ください。アプリ内アップデーターも COS を優先し、GitHub にフォールバックします。
 
 ビルド不要 —— dmg/exe をダウンロードしてそのままインストールできます。インストール済みクライアントは内蔵アップデーターで自動更新されます。（ソースから自分でパッケージングする場合は以下のコマンドを参照。）
 

@@ -20,6 +20,7 @@
 部署完成后在「设置 → 火宝快捷配置」粘贴 Key，一键写入三条推荐配置，开箱即用
 
 <h3>📥 <a href="https://github.com/chatfire-AI/huobao-drama/releases/latest">下载桌面版（macOS / Windows）</a></h3>
+<h3>🌐 <a href="https://www.chatfire.site">官方网站</a></h3>
 
 </div>
 
@@ -284,13 +285,15 @@ cd backend && npx tsx scripts/import-mysql-to-sqlite.ts
 
 ### 🖥️ 桌面应用（推荐）
 
-**⬇️ 预编译安装包下载：[GitHub Releases](https://github.com/chatfire-AI/huobao-drama/releases/latest)**
+**⬇️ 预编译安装包下载：[国内镜像（腾讯云，推荐）](https://installer.chatfire.site/huobao-drama/v4.0.0/) · [GitHub Releases（海外）](https://github.com/chatfire-AI/huobao-drama/releases/latest)**
 
 | 平台 | 下载文件 |
 |---|---|
-| macOS（Apple Silicon，M 系列） | `HuobaoDrama-<版本号>-arm64.dmg` |
-| macOS（Intel） | `HuobaoDrama-<版本号>.dmg` |
-| Windows | `HuobaoDrama Setup <版本号>.exe` |
+| macOS（Apple Silicon，M 系列） | `HuobaoDrama-4.0.0-arm64.dmg` |
+| macOS（Intel） | `HuobaoDrama-4.0.0.dmg` |
+| Windows | `HuobaoDrama.Setup.4.0.0.exe` |
+
+> 国内用户请用腾讯云镜像直链下载（GitHub 在国内访问不稳定）。应用内更新器同样国内源优先、GitHub 兜底。
 
 无需构建 —— 下载 dmg/exe 直接安装即可，已安装客户端会通过内置更新器自动升级。（如需从源码自行打包，见下方命令。）
 
