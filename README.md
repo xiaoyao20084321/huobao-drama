@@ -647,3 +647,7 @@ This project has been recognized with a link from the [LINUX DO](https://linux.d
 - [LINUX DO](https://linux.do/) — a genuine open-source spirit, a community built on sharing
 
 ---
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/chart?repos=chatfire-ai/huobao-drama&type=date&legend=top-left)](https://www.star-history.com/?repos=chatfire-ai%2Fhuobao-drama&type=date&legend=top-left)
