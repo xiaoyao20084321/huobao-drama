@@ -284,20 +284,20 @@ The episode list shows the production status of every episode — click "Enter S
 
 ### 🖥️ Desktop App (recommended)
 
-**⬇️ Prebuilt installers: [GitHub Releases](https://github.com/chatfire-AI/huobao-drama/releases/latest) · [Mirror for China (Tencent COS)](https://installer.chatfire.site/huobao-drama/v4.0.4/)**
+**⬇️ Prebuilt installers: [GitHub Releases](https://github.com/chatfire-AI/huobao-drama/releases/latest) · [Mirror for China (Tencent COS)](https://installer.chatfire.site/huobao-drama/v4.0.5/)**
 
 | Platform | File to download |
 |---|---|
-| macOS (Apple Silicon, M-series) | `HuobaoDrama-4.0.4-arm64.dmg` |
-| macOS (Intel) | `HuobaoDrama-4.0.4.dmg` |
-| Windows | `HuobaoDrama.Setup.4.0.4.exe` |
+| macOS (Apple Silicon, M-series) | `HuobaoDrama-4.0.5-arm64.dmg` |
+| macOS (Intel) | `HuobaoDrama-4.0.5.dmg` |
+| Windows | `HuobaoDrama.Setup.4.0.5.exe` |
 
 > China users: use the COS mirror above (GitHub is slow/unreachable in mainland China). The in-app updater also checks the COS mirror first, then falls back to GitHub.
 
 **Command-line install (recommended, no Gatekeeper fix needed)**: downloading via curl never sets macOS's quarantine attribute, so the app opens cleanly with no "damaged" prompt (use the `-arm64.dmg` for Apple Silicon, the plain dmg for Intel):
 
 ```bash
-curl -L -o /tmp/HuobaoDrama.dmg https://installer.chatfire.site/huobao-drama/v4.0.4/HuobaoDrama-4.0.4-arm64.dmg \
+curl -L -o /tmp/HuobaoDrama.dmg https://installer.chatfire.site/huobao-drama/v4.0.5/HuobaoDrama-4.0.5-arm64.dmg \
   && hdiutil attach -nobrowse /tmp/HuobaoDrama.dmg \
   && cp -R /Volumes/HuobaoDrama*/HuobaoDrama.app /Applications/ \
   && hdiutil detach /Volumes/HuobaoDrama*
@@ -419,14 +419,14 @@ server {
 **Option A — prebuilt image (no clone, no build):** multi-arch (`linux/amd64` + `linux/arm64`), x86 servers and ARM devices match automatically
 
 ```bash
-docker pull huobao/huobao-drama:4.0.0
+docker pull huobao/huobao-drama:4.0.5
 
 docker run -d \
   --name huobao-drama \
   -p 5679:5679 \
   -v huobao-data:/app/data \
   --restart unless-stopped \
-  huobao/huobao-drama:4.0.0
+  huobao/huobao-drama:4.0.5
 ```
 
 **Option B — docker compose (source build + Watchtower in-app updates):** the repo root provides an all-in-one `Dockerfile` (three stages: frontend generate + backend dependencies + runtime; the backend runs via tsx just like server deployment) and `docker-compose.yml` (app + Watchtower):
@@ -436,7 +436,7 @@ docker run -d \
 cp .env.example .env   # edit WATCHTOWER_TOKEN
 
 # 2. Build and start (inject a version at publish time for "About & Updates" comparison)
-HUOBAO_VERSION=4.0.0 docker compose up -d --build
+HUOBAO_VERSION=4.0.5 docker compose up -d --build
 
 # 3. Visit http://localhost:5679
 ```

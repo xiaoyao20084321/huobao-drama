@@ -285,20 +285,20 @@ cd backend && npx tsx scripts/import-mysql-to-sqlite.ts
 
 ### 🖥️ 桌面应用（推荐）
 
-**⬇️ 预编译安装包下载：[国内镜像（腾讯云，推荐）](https://installer.chatfire.site/huobao-drama/v4.0.4/) · [GitHub Releases（海外）](https://github.com/chatfire-AI/huobao-drama/releases/latest)**
+**⬇️ 预编译安装包下载：[国内镜像（腾讯云，推荐）](https://installer.chatfire.site/huobao-drama/v4.0.5/) · [GitHub Releases（海外）](https://github.com/chatfire-AI/huobao-drama/releases/latest)**
 
 | 平台 | 下载文件 |
 |---|---|
-| macOS（Apple Silicon，M 系列） | `HuobaoDrama-4.0.4-arm64.dmg` |
-| macOS（Intel） | `HuobaoDrama-4.0.4.dmg` |
-| Windows | `HuobaoDrama.Setup.4.0.4.exe` |
+| macOS（Apple Silicon，M 系列） | `HuobaoDrama-4.0.5-arm64.dmg` |
+| macOS（Intel） | `HuobaoDrama-4.0.5.dmg` |
+| Windows | `HuobaoDrama.Setup.4.0.5.exe` |
 
 > 国内用户请用腾讯云镜像直链下载（GitHub 在国内访问不稳定）。应用内更新器同样国内源优先、GitHub 兜底。
 
 **命令行安装（推荐，免修复）**：用 curl 下载不会触发 macOS 隔离属性，安装后双击即开，不会遇到「已损坏」提示（Apple Silicon 把 `arm64` 文件名换成对应版本，Intel 用无后缀 dmg）：
 
 ```bash
-curl -L -o /tmp/HuobaoDrama.dmg https://installer.chatfire.site/huobao-drama/v4.0.4/HuobaoDrama-4.0.4-arm64.dmg \
+curl -L -o /tmp/HuobaoDrama.dmg https://installer.chatfire.site/huobao-drama/v4.0.5/HuobaoDrama-4.0.5-arm64.dmg \
   && hdiutil attach -nobrowse /tmp/HuobaoDrama.dmg \
   && cp -R /Volumes/HuobaoDrama*/HuobaoDrama.app /Applications/ \
   && hdiutil detach /Volumes/HuobaoDrama*
@@ -418,14 +418,14 @@ server {
 **方式一：预构建镜像（免克隆、免构建）**：多架构镜像（`linux/amd64` + `linux/arm64`），x86 服务器与 ARM 设备自动匹配
 
 ```bash
-docker pull huobao/huobao-drama:4.0.0
+docker pull huobao/huobao-drama:4.0.5
 
 docker run -d \
   --name huobao-drama \
   -p 5679:5679 \
   -v huobao-data:/app/data \
   --restart unless-stopped \
-  huobao/huobao-drama:4.0.0
+  huobao/huobao-drama:4.0.5
 ```
 
 **方式二：docker compose（源码构建 + Watchtower 应用内更新）**：根目录提供一体化 `Dockerfile`（前端 generate + 后端依赖/运行时三阶段，后端与服务器部署一致走 tsx）与 `docker-compose.yml`（应用 + Watchtower）：
@@ -435,7 +435,7 @@ docker run -d \
 cp .env.example .env   # 修改 WATCHTOWER_TOKEN
 
 # 2. 构建并启动（发布时注入版本号，供「关于更新」比对）
-HUOBAO_VERSION=4.0.0 docker compose up -d --build
+HUOBAO_VERSION=4.0.5 docker compose up -d --build
 
 # 3. 访问 http://localhost:5679
 ```

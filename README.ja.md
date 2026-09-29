@@ -284,20 +284,20 @@ cd backend && npx tsx scripts/import-mysql-to-sqlite.ts
 
 ### 🖥️ デスクトップアプリ（推奨）
 
-**⬇️ ビルド済みインストーラー: [GitHub Releases](https://github.com/chatfire-AI/huobao-drama/releases/latest) · [中国向けミラー（Tencent COS）](https://installer.chatfire.site/huobao-drama/v4.0.4/)**
+**⬇️ ビルド済みインストーラー: [GitHub Releases](https://github.com/chatfire-AI/huobao-drama/releases/latest) · [中国向けミラー（Tencent COS）](https://installer.chatfire.site/huobao-drama/v4.0.5/)**
 
 | プラットフォーム | ダウンロードファイル |
 |---|---|
-| macOS（Apple Silicon、M シリーズ） | `HuobaoDrama-4.0.4-arm64.dmg` |
-| macOS（Intel） | `HuobaoDrama-4.0.4.dmg` |
-| Windows | `HuobaoDrama.Setup.4.0.4.exe` |
+| macOS（Apple Silicon、M シリーズ） | `HuobaoDrama-4.0.5-arm64.dmg` |
+| macOS（Intel） | `HuobaoDrama-4.0.5.dmg` |
+| Windows | `HuobaoDrama.Setup.4.0.5.exe` |
 
 > 中国本土では GitHub が不安定なため、Tencent COS ミラーをご利用ください。アプリ内アップデーターも COS を優先し、GitHub にフォールバックします。
 
 **コマンドラインインストール（推奨・修復不要）**：curl でのダウンロードは macOS の隔離属性が付かないため、「壊れている」警告なしでそのまま起動できます（Apple Silicon は `-arm64.dmg`、Intel は無印の dmg）：
 
 ```bash
-curl -L -o /tmp/HuobaoDrama.dmg https://installer.chatfire.site/huobao-drama/v4.0.4/HuobaoDrama-4.0.4-arm64.dmg \
+curl -L -o /tmp/HuobaoDrama.dmg https://installer.chatfire.site/huobao-drama/v4.0.5/HuobaoDrama-4.0.5-arm64.dmg \
   && hdiutil attach -nobrowse /tmp/HuobaoDrama.dmg \
   && cp -R /Volumes/HuobaoDrama*/HuobaoDrama.app /Applications/ \
   && hdiutil detach /Volumes/HuobaoDrama*
@@ -419,14 +419,14 @@ server {
 **方法 A — ビルド済みイメージ（クローン・ビルド不要）**：マルチアーキテクチャ（`linux/amd64` + `linux/arm64`）、x86 サーバーと ARM デバイスの両方に自動対応
 
 ```bash
-docker pull huobao/huobao-drama:4.0.0
+docker pull huobao/huobao-drama:4.0.5
 
 docker run -d \
   --name huobao-drama \
   -p 5679:5679 \
   -v huobao-data:/app/data \
   --restart unless-stopped \
-  huobao/huobao-drama:4.0.0
+  huobao/huobao-drama:4.0.5
 ```
 
 **方法 B — docker compose（ソースビルド + Watchtower アプリ内更新）**：リポジトリルートにオールインワンの `Dockerfile`（フロントエンド generate + バックエンド依存/ランタイムの 3 ステージ。バックエンドはサーバーデプロイと同様に tsx で実行）と `docker-compose.yml`（アプリ + Watchtower）を用意：
@@ -436,7 +436,7 @@ docker run -d \
 cp .env.example .env   # WATCHTOWER_TOKEN を変更
 
 # 2. ビルドして起動（リリース時にバージョンを注入し、「关于更新」での比較に使用）
-HUOBAO_VERSION=4.0.0 docker compose up -d --build
+HUOBAO_VERSION=4.0.5 docker compose up -d --build
 
 # 3. http://localhost:5679 にアクセス
 ```
