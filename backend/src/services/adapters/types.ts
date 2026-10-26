@@ -74,6 +74,7 @@ export interface ProviderRequest {
 }
 
 export interface AIConfig {
+  id?: number
   provider: string
   baseUrl: string
   apiKey: string
@@ -130,10 +131,12 @@ export interface VideoGenResponse {
   isAsync: boolean
   taskId?: string
   videoUrl?: string
+  duration?: number
 }
 
 export interface VideoPollResponse {
   status: 'pending' | 'processing' | 'completed' | 'failed'
+  stage?: 'transferring'
   videoUrl?: string
   duration?: number
   error?: string
