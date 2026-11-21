@@ -13,21 +13,14 @@
 **中英双语 / Bilingual** | [简体中文](README.zh-CN.md) | [English](README.en.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
 
 <p>
-  <a href="https://firelumi.com/">
-    <img src="docs/images/firelumi-commercial-zh-CN.png" width="760" alt="FireLumi 商业版 · 打开网页版" />
+  <a href="https://api.firemux.cn">
+    <img src="docs/images/api-key-cta.svg" width="380" alt="获取 FireMux API Key" />
   </a>
 </p>
 
-登录即可体验小说转短剧、分镜制作、视频生成和剪辑。
-
 <p>
-  <a href="https://github.com/chatfire-AI/huobao-drama/releases/latest">
-    <img src="docs/images/desktop-download-cta.svg" width="380" alt="立即下载桌面版 / Download Desktop App (macOS / Windows)" />
-  </a>
-</p>
-<p>
-  <a href="https://www.firemux.cn">
-    <img src="docs/images/website-cta.svg" width="320" alt="访问 FireMux 官网 / Visit the official website" />
+  <a href="https://firemux.cn/#opensource">
+    <img src="docs/images/open-source-download-cta.svg" width="380" alt="开源项目与下载" />
   </a>
 </p>
 
@@ -363,14 +356,14 @@ The episode list shows the production status of every episode — click "Enter S
 
 ### 🖥️ 桌面应用（推荐） / Desktop App (recommended)
 
-**⬇️ 预编译安装包下载：[国内镜像（腾讯云，推荐）](https://installer.firemux.site/huobao-drama/v4.0.11/) · [GitHub Releases（海外）](https://github.com/chatfire-AI/huobao-drama/releases/latest)**<br>
-**⬇️ Prebuilt installers: [GitHub Releases](https://github.com/chatfire-AI/huobao-drama/releases/latest) · [Mirror for China (Tencent COS)](https://installer.firemux.site/huobao-drama/v4.0.11/)**
+**⬇️ 预编译安装包下载：[macOS Apple Silicon](https://installer.firemux.site/huobao-drama/v4.0.11/HuobaoDrama-4.0.11-arm64.dmg) · [macOS Intel](https://installer.firemux.site/huobao-drama/v4.0.11/HuobaoDrama-4.0.11.dmg) · [Windows x64](https://installer.firemux.site/huobao-drama/v4.0.11/HuobaoDrama.Setup.4.0.11.exe) · [GitHub Releases（海外）](https://github.com/chatfire-AI/huobao-drama/releases/latest)**<br>
+**⬇️ Prebuilt installers: [GitHub Releases](https://github.com/chatfire-AI/huobao-drama/releases/latest) · [macOS Apple Silicon](https://installer.firemux.site/huobao-drama/v4.0.11/HuobaoDrama-4.0.11-arm64.dmg) · [macOS Intel](https://installer.firemux.site/huobao-drama/v4.0.11/HuobaoDrama-4.0.11.dmg) · [Windows x64](https://installer.firemux.site/huobao-drama/v4.0.11/HuobaoDrama.Setup.4.0.11.exe)**
 
 |平台<br>Platform|下载文件<br>File to download|
 |---|---|
-|macOS（Apple Silicon，M 系列）<br>macOS (Apple Silicon, M-series)| `HuobaoDrama-4.0.5-arm64.dmg` |
-|macOS（Intel）<br>macOS (Intel)| `HuobaoDrama-4.0.5.dmg` |
-| Windows | `HuobaoDrama.Setup.4.0.5.exe` |
+|macOS（Apple Silicon，M 系列）<br>macOS (Apple Silicon, M-series)| `HuobaoDrama-4.0.11-arm64.dmg` |
+|macOS（Intel）<br>macOS (Intel)| `HuobaoDrama-4.0.11.dmg` |
+| Windows | `HuobaoDrama.Setup.4.0.11.exe` |
 
 > 国内用户请用腾讯云镜像直链下载（GitHub 在国内访问不稳定）。应用内更新器同样国内源优先、GitHub 兜底。<br>
 > China users: use the COS mirror above (GitHub is slow/unreachable in mainland China). The in-app updater also checks the COS mirror first, then falls back to GitHub.
@@ -878,7 +871,7 @@ Common checks:
 
 ```bash
 cd backend && npm run typecheck
-cd ../frontend && npm run build
+cd ../frontend && npm run generate  # emits index.html (npm run build does not)
 ```
 
 ---

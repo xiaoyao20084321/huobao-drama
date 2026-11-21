@@ -14,22 +14,14 @@
 [Features](#-features) • [Quick Start](#-quick-start) • [Walkthrough](#-visual-walkthrough) • [Desktop App](#-desktop-app-recommended) • [Deployment](#-deployment)
 
 <p>
-  <a href="https://firelumi.com/">
-    <img src="docs/images/firelumi-commercial-en.webp" width="760" alt="FireLumi Commercial Edition · Open web app" />
-  </a>
-</p>
-
-Sign in to adapt novels into short dramas, create storyboards, and generate and edit video.
-
-<p>
-  <a href="https://github.com/chatfire-AI/huobao-drama/releases/latest">
-    <img src="docs/images/desktop-download-cta-en.svg" width="380" alt="Download open-source app" />
+  <a href="https://api.firemux.com">
+    <img src="docs/images/api-key-cta-en.svg" width="380" alt="Get a FireMux API key" />
   </a>
 </p>
 
 <p>
-  <a href="https://www.firemux.cn">
-    <img src="docs/images/website-cta-en.svg" width="320" alt="Visit the FireMux website" />
+  <a href="https://firemux.cn/#opensource">
+    <img src="docs/images/open-source-download-cta-en.svg" width="380" alt="Open source &amp; downloads" />
   </a>
 </p>
 
@@ -295,13 +287,13 @@ The episode list shows the production status of every episode — click "Enter S
 
 ### 🖥️ Desktop App (recommended)
 
-**⬇️ Prebuilt installers: [GitHub Releases](https://github.com/chatfire-AI/huobao-drama/releases/latest) · [Mirror for China (Tencent COS)](https://installer.firemux.site/huobao-drama/v4.0.11/)**
+**⬇️ Prebuilt installers: [GitHub Releases](https://github.com/chatfire-AI/huobao-drama/releases/latest) · [macOS Apple Silicon](https://installer.firemux.site/huobao-drama/v4.0.11/HuobaoDrama-4.0.11-arm64.dmg) · [macOS Intel](https://installer.firemux.site/huobao-drama/v4.0.11/HuobaoDrama-4.0.11.dmg) · [Windows x64](https://installer.firemux.site/huobao-drama/v4.0.11/HuobaoDrama.Setup.4.0.11.exe)**
 
 | Platform | File to download |
 |---|---|
-| macOS (Apple Silicon, M-series) | `HuobaoDrama-4.0.5-arm64.dmg` |
-| macOS (Intel) | `HuobaoDrama-4.0.5.dmg` |
-| Windows | `HuobaoDrama.Setup.4.0.5.exe` |
+| macOS (Apple Silicon, M-series) | `HuobaoDrama-4.0.11-arm64.dmg` |
+| macOS (Intel) | `HuobaoDrama-4.0.11.dmg` |
+| Windows | `HuobaoDrama.Setup.4.0.11.exe` |
 
 > China users: use the COS mirror above (GitHub is slow/unreachable in mainland China). The in-app updater also checks the COS mirror first, then falls back to GitHub.
 

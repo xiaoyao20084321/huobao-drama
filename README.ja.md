@@ -14,22 +14,14 @@
 [機能](#-機能) • [クイックスタート](#-クイックスタート) • [チュートリアル](#-チュートリアル画像付き) • [デスクトップ版](#-デスクトップアプリ推奨) • [デプロイ](#-デプロイ)
 
 <p>
-  <a href="https://firelumi.com/">
-    <img src="docs/images/firelumi-commercial-ja.webp" width="760" alt="FireLumi 商用版 · Web版を開く" />
-  </a>
-</p>
-
-ログインすると、小説のショートドラマ化、絵コンテ制作、動画生成・編集を利用できます。
-
-<p>
-  <a href="https://github.com/chatfire-AI/huobao-drama/releases/latest">
-    <img src="docs/images/desktop-download-cta-ja.svg" width="380" alt="オープンソース版を入手" />
+  <a href="https://api.firemux.com">
+    <img src="docs/images/api-key-cta-ja.svg" width="380" alt="FireMux API キーを取得" />
   </a>
 </p>
 
 <p>
-  <a href="https://www.firemux.cn">
-    <img src="docs/images/website-cta-ja.svg" width="320" alt="FireMux 公式サイト" />
+  <a href="https://firemux.cn/#opensource">
+    <img src="docs/images/open-source-download-cta-ja.svg" width="380" alt="オープンソース・ダウンロード" />
   </a>
 </p>
 
@@ -295,13 +287,13 @@ cd backend && npx tsx scripts/import-mysql-to-sqlite.ts
 
 ### 🖥️ デスクトップアプリ（推奨）
 
-**⬇️ ビルド済みインストーラー: [GitHub Releases](https://github.com/chatfire-AI/huobao-drama/releases/latest) · [中国向けミラー（Tencent COS）](https://installer.firemux.site/huobao-drama/v4.0.11/)**
+**⬇️ ビルド済みインストーラー: [GitHub Releases](https://github.com/chatfire-AI/huobao-drama/releases/latest) · [macOS Apple Silicon](https://installer.firemux.site/huobao-drama/v4.0.11/HuobaoDrama-4.0.11-arm64.dmg) · [macOS Intel](https://installer.firemux.site/huobao-drama/v4.0.11/HuobaoDrama-4.0.11.dmg) · [Windows x64](https://installer.firemux.site/huobao-drama/v4.0.11/HuobaoDrama.Setup.4.0.11.exe)**
 
 | プラットフォーム | ダウンロードファイル |
 |---|---|
-| macOS（Apple Silicon、M シリーズ） | `HuobaoDrama-4.0.5-arm64.dmg` |
-| macOS（Intel） | `HuobaoDrama-4.0.5.dmg` |
-| Windows | `HuobaoDrama.Setup.4.0.5.exe` |
+| macOS（Apple Silicon、M シリーズ） | `HuobaoDrama-4.0.11-arm64.dmg` |
+| macOS（Intel） | `HuobaoDrama-4.0.11.dmg` |
+| Windows | `HuobaoDrama.Setup.4.0.11.exe` |
 
 > 中国本土では GitHub が不安定なため、Tencent COS ミラーをご利用ください。アプリ内アップデーターも COS を優先し、GitHub にフォールバックします。
 
@@ -625,7 +617,7 @@ Issue と Pull Request を歓迎します！
 
 ```bash
 cd backend && npm run typecheck
-cd ../frontend && npm run build
+cd ../frontend && npm run generate  # index.html を产出する（npm run build は产出しない）
 ```
 
 ---

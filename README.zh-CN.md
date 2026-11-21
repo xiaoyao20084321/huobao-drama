@@ -14,22 +14,14 @@
 [功能特性](#-功能特性) • [快速开始](#-快速开始) • [图文教程](#-图文教程) • [桌面版](#-桌面应用推荐) • [部署指南](#-部署指南)
 
 <p>
-  <a href="https://firelumi.com/">
-    <img src="docs/images/firelumi-commercial-zh-CN.png" width="760" alt="FireLumi 商业版 · 打开网页版" />
-  </a>
-</p>
-
-登录即可体验小说转短剧、分镜制作、视频生成和剪辑。
-
-<p>
-  <a href="https://github.com/chatfire-AI/huobao-drama/releases/latest">
-    <img src="docs/images/desktop-download-cta-zh-CN.svg" width="380" alt="下载开源桌面版" />
+  <a href="https://api.firemux.cn">
+    <img src="docs/images/api-key-cta.svg" width="380" alt="获取 FireMux API Key" />
   </a>
 </p>
 
 <p>
-  <a href="https://www.firemux.cn">
-    <img src="docs/images/website-cta-zh-CN.svg" width="320" alt="访问 FireMux 官网" />
+  <a href="https://firemux.cn/#opensource">
+    <img src="docs/images/open-source-download-cta.svg" width="380" alt="开源项目与下载" />
   </a>
 </p>
 
@@ -296,13 +288,13 @@ cd backend && npx tsx scripts/import-mysql-to-sqlite.ts
 
 ### 🖥️ 桌面应用（推荐）
 
-**⬇️ 预编译安装包下载：[国内镜像（腾讯云，推荐）](https://installer.firemux.site/huobao-drama/v4.0.11/) · [GitHub Releases（海外）](https://github.com/chatfire-AI/huobao-drama/releases/latest)**
+**⬇️ 预编译安装包下载：[macOS Apple Silicon](https://installer.firemux.site/huobao-drama/v4.0.11/HuobaoDrama-4.0.11-arm64.dmg) · [macOS Intel](https://installer.firemux.site/huobao-drama/v4.0.11/HuobaoDrama-4.0.11.dmg) · [Windows x64](https://installer.firemux.site/huobao-drama/v4.0.11/HuobaoDrama.Setup.4.0.11.exe) · [GitHub Releases（海外）](https://github.com/chatfire-AI/huobao-drama/releases/latest)**
 
 | 平台 | 下载文件 |
 |---|---|
-| macOS（Apple Silicon，M 系列） | `HuobaoDrama-4.0.5-arm64.dmg` |
-| macOS（Intel） | `HuobaoDrama-4.0.5.dmg` |
-| Windows | `HuobaoDrama.Setup.4.0.5.exe` |
+| macOS（Apple Silicon，M 系列） | `HuobaoDrama-4.0.11-arm64.dmg` |
+| macOS（Intel） | `HuobaoDrama-4.0.11.dmg` |
+| Windows | `HuobaoDrama.Setup.4.0.11.exe` |
 
 > 国内用户请用腾讯云镜像直链下载（GitHub 在国内访问不稳定）。应用内更新器同样国内源优先、GitHub 兜底。
 
@@ -623,7 +615,7 @@ A: 后端会在首次启动时自动创建所有表，检查日志确认初始�
 
 ```bash
 cd backend && npm run typecheck
-cd ../frontend && npm run build
+cd ../frontend && npm run generate  # 产出 index.html；npm run build 不产出
 ```
 
 ---

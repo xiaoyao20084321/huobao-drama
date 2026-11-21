@@ -14,22 +14,14 @@
 [기능](#-기능) • [빠른 시작](#-빠른-시작) • [튜토리얼](#-그림-튜토리얼) • [데스크톱 앱](#-데스크톱-앱-권장) • [배포](#-배포)
 
 <p>
-  <a href="https://firelumi.com/">
-    <img src="docs/images/firelumi-commercial-ko.webp" width="760" alt="FireLumi 상용 버전 · 웹 앱 열기" />
-  </a>
-</p>
-
-로그인하면 소설의 숏드라마 각색, 스토리보드 제작, 영상 생성과 편집을 이용할 수 있습니다.
-
-<p>
-  <a href="https://github.com/chatfire-AI/huobao-drama/releases/latest">
-    <img src="docs/images/desktop-download-cta-ko.svg" width="380" alt="오픈소스 데스크톱 앱 받기" />
+  <a href="https://api.firemux.com">
+    <img src="docs/images/api-key-cta-ko.svg" width="380" alt="FireMux API 키 받기" />
   </a>
 </p>
 
 <p>
-  <a href="https://www.firemux.cn">
-    <img src="docs/images/website-cta-ko.svg" width="320" alt="FireMux 공식 사이트" />
+  <a href="https://firemux.cn/#opensource">
+    <img src="docs/images/open-source-download-cta-ko.svg" width="380" alt="오픈소스 · 데스크톱 다운로드" />
   </a>
 </p>
 
@@ -295,13 +287,13 @@ cd backend && npx tsx scripts/import-mysql-to-sqlite.ts
 
 ### 🖥️ 데스크톱 앱(권장)
 
-**⬇️ 빌드된 설치 파일: [GitHub Releases](https://github.com/chatfire-AI/huobao-drama/releases/latest) · [중국용 미러(Tencent COS)](https://installer.firemux.site/huobao-drama/v4.0.11/)**
+**⬇️ 빌드된 설치 파일: [GitHub Releases](https://github.com/chatfire-AI/huobao-drama/releases/latest) · [macOS Apple Silicon](https://installer.firemux.site/huobao-drama/v4.0.11/HuobaoDrama-4.0.11-arm64.dmg) · [macOS Intel](https://installer.firemux.site/huobao-drama/v4.0.11/HuobaoDrama-4.0.11.dmg) · [Windows x64](https://installer.firemux.site/huobao-drama/v4.0.11/HuobaoDrama.Setup.4.0.11.exe)**
 
 | 플랫폼 | 다운로드 파일 |
 |---|---|
-| macOS(Apple Silicon, M 시리즈) | `HuobaoDrama-4.0.5-arm64.dmg` |
-| macOS(Intel) | `HuobaoDrama-4.0.5.dmg` |
-| Windows | `HuobaoDrama.Setup.4.0.5.exe` |
+| macOS(Apple Silicon, M 시리즈) | `HuobaoDrama-4.0.11-arm64.dmg` |
+| macOS(Intel) | `HuobaoDrama-4.0.11.dmg` |
+| Windows | `HuobaoDrama.Setup.4.0.11.exe` |
 
 > 중국 본토에서는 GitHub이 불안정하므로 Tencent COS 미러를 이용하세요. 앱 내 업데이터도 COS를 우선하고 GitHub으로 폴백합니다.
 
@@ -625,7 +617,7 @@ Issue와 Pull Request를 환영합니다!
 
 ```bash
 cd backend && npm run typecheck
-cd ../frontend && npm run build
+cd ../frontend && npm run generate  # index.html을 산출함(npm run build는 산출하지 않음)
 ```
 
 ---
